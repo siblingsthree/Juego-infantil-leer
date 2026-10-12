@@ -1,0 +1,208 @@
+'use strict';
+/* Trazado de letras en canvas con corrección automática.
+   - Se dibuja la letra guía con la fuente Andika (formas escolares: "a" y "g" de un piso).
+   - La niña pinta encima con el dedo o el ratón.
+   - Corrección: cobertura (qué parte de la letra quedó pintada) y precisión
+     (qué parte de la pintura cayó dentro de la letra ampliada con un margen de tolerancia). */
+class Tracer {
+  constructor(canvas, opts) {
+    this.canvas = canvas;
+    canvas.tracer = this; // acceso para pruebas automáticas
+    this.ctx = canvas.getContext('2d');
+    this.text = opts.text;
+    this.guide = opts.guide !== false;
+    this.font = "'Andika', 'Nunito', Arial, sans-serif";
+    this.strokes = [];
+    this.current = null;
+    this.hintUntil = 0;
+    this.onInk = opts.onInk || (() => {});
+    this.mask = document.createElement('canvas');
+    this.tol = document.createElement('canvas');
+    this.ink = document.createElement('canvas');
+    this.w = 0; this.h = 0; this.dpr = 1; this.fs = 10;
+
+    this._down = e => this.begin(e);
+    this._move = e => this.move(e);
+    this._up = e => this.end(e);
+    canvas.addEventListener('pointerdown', this._down);
+    canvas.addEventListener('pointermove', this._move);
+    canvas.addEventListener('pointerup', this._up);
+    canvas.addEventListener('pointercancel', this._up);
+    canvas.addEventListener('pointerleave', this._up);
+
+    this.ro = new ResizeObserver(() => this.resize());
+    this.ro.observe(canvas.parentElement);
+    this.resize();
+    if (document.fonts && document.fonts.load) {
+      document.fonts.load(`700 40px Andika`).then(() => this.resize()).catch(() => {});
+    }
+  }
+
+  destroy() {
+    this.ro.disconnect();
+    const c = this.canvas;
+    c.removeEventListener('pointerdown', this._down);
+    c.removeEventListener('pointermove', this._move);
+    c.removeEventListener('pointerup', this._up);
+    c.removeEventListener('pointercancel', this._up);
+    c.removeEventListener('pointerleave', this._up);
+  }
+
+  cssVar(name, fallback) {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }
+
+  resize() {
+    const r = this.canvas.parentElement.getBoundingClientRect();
+    const w = Math.floor(r.width), h = Math.floor(r.height);
+    if (!w || !h) return;
+    this.w = w; this.h = h;
+    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.canvas.width = w * this.dpr; this.canvas.height = h * this.dpr;
+    [this.mask, this.tol, this.ink].forEach(c => { c.width = w; c.height = h; });
+    this.layout();
+    this.redrawInk();
+    this.render();
+  }
+
+  layout() {
+    const m = this.mask.getContext('2d');
+    let fs = this.h * 0.62;
+    m.font = `700 ${fs}px ${this.font}`;
+    const maxW = this.w * 0.86;
+    const tw = m.measureText(this.text).width;
+    if (tw > maxW) fs = fs * maxW / tw;
+    this.fs = fs;
+    this.baseY = this.h * 0.70;
+    this.x = this.w / 2;
+    this.lineW = Math.max(10, fs * 0.13);
+
+    const setup = c => { c.clearRect(0, 0, this.w, this.h); c.font = `700 ${fs}px ${this.font}`; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillStyle = '#000'; c.strokeStyle = '#000'; c.lineJoin = 'round'; c.lineCap = 'round'; };
+    setup(m);
+    m.fillText(this.text, this.x, this.baseY);
+    const t = this.tol.getContext('2d');
+    setup(t);
+    t.lineWidth = Math.max(18, fs * 0.26);
+    t.strokeText(this.text, this.x, this.baseY);
+    t.fillText(this.text, this.x, this.baseY);
+
+    const md = m.getImageData(0, 0, this.w, this.h).data;
+    this.letterPixels = [];
+    const step = 2;
+    for (let y = 0; y < this.h; y += step) {
+      for (let x = 0; x < this.w; x += step) {
+        if (md[(y * this.w + x) * 4 + 3] > 60) this.letterPixels.push(y * this.w + x);
+      }
+    }
+    this.tolData = t.getImageData(0, 0, this.w, this.h).data;
+  }
+
+  point(e) {
+    const r = this.canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  begin(e) {
+    if (e.button != null && e.button !== 0 && e.pointerType === 'mouse') return;
+    e.preventDefault();
+    try { this.canvas.setPointerCapture(e.pointerId); } catch (err) { /* nada */ }
+    this.current = [this.point(e)];
+    this.strokes.push(this.current);
+    this.drawSegment(this.current);
+    this.render();
+    this.onInk();
+  }
+  move(e) {
+    if (!this.current) return;
+    e.preventDefault();
+    const pts = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
+    for (const ev of pts) this.current.push(this.point(ev));
+    this.drawSegment(this.current.slice(-Math.min(this.current.length, pts.length + 1)));
+    this.render();
+  }
+  end(e) {
+    if (!this.current) return;
+    this.current = null;
+    this.render();
+  }
+
+  drawSegment(pts) {
+    const c = this.ink.getContext('2d');
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    c.strokeStyle = '#000'; c.lineWidth = this.lineW;
+    c.beginPath();
+    if (pts.length === 1) { c.arc(pts[0].x, pts[0].y, this.lineW / 2, 0, Math.PI * 2); c.fillStyle = '#000'; c.fill(); return; }
+    c.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) c.lineTo(pts[i].x, pts[i].y);
+    c.stroke();
+  }
+  redrawInk() {
+    const c = this.ink.getContext('2d');
+    c.clearRect(0, 0, this.w, this.h);
+    for (const s of this.strokes) this.drawSegment(s);
+  }
+
+  render() {
+    const c = this.ctx, w = this.w, h = this.h, fs = this.fs;
+    c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    c.clearRect(0, 0, w, h);
+    // Pauta escolar: línea base, línea media (altura de las minúsculas) y línea superior.
+    c.lineWidth = 2;
+    c.strokeStyle = this.cssVar('--line', '#bfd6c7');
+    const lines = [this.baseY, this.baseY - fs * 0.5, this.baseY - fs * 0.72, this.baseY + fs * 0.22];
+    lines.forEach((y, i) => {
+      c.setLineDash(i === 1 ? [8, 10] : []);
+      c.beginPath(); c.moveTo(w * 0.04, y); c.lineTo(w * 0.96, y); c.stroke();
+    });
+    c.setLineDash([]);
+    const showGuide = this.guide || Date.now() < this.hintUntil;
+    if (showGuide) {
+      c.font = `700 ${fs}px ${this.font}`;
+      c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+      c.fillStyle = this.cssVar('--guide', '#c9ddd0');
+      c.fillText(this.text, this.x, this.baseY);
+      c.lineWidth = Math.max(2, fs * 0.02);
+      c.strokeStyle = this.cssVar('--muted', '#5e7a6b');
+      c.setLineDash([fs * 0.06, fs * 0.05]);
+      c.strokeText(this.text, this.x, this.baseY);
+      c.setLineDash([]);
+    }
+    // Tinta: el canvas de tinta es negro; se tiñe con el color del tema.
+    c.save();
+    c.globalCompositeOperation = 'source-over';
+    const tinted = document.createElement('canvas');
+    tinted.width = w; tinted.height = h;
+    const tc = tinted.getContext('2d');
+    tc.drawImage(this.ink, 0, 0);
+    tc.globalCompositeOperation = 'source-in';
+    tc.fillStyle = this.cssVar('--ink', '#2e7bd6');
+    tc.fillRect(0, 0, w, h);
+    c.drawImage(tinted, 0, 0);
+    c.restore();
+  }
+
+  clear() { this.strokes = []; this.current = null; this.redrawInk(); this.render(); }
+  showHint(ms = 2500) {
+    this.hintUntil = Date.now() + ms; this.render();
+    setTimeout(() => this.render(), ms + 20);
+  }
+  hasInk() { return this.strokes.some(s => s.length > 2); }
+
+  evaluate() {
+    const d = this.ink.getContext('2d').getImageData(0, 0, this.w, this.h).data;
+    let covered = 0;
+    for (const i of this.letterPixels) if (d[i * 4 + 3] > 40) covered++;
+    const coverage = this.letterPixels.length ? covered / this.letterPixels.length : 0;
+    let inkCount = 0, inside = 0;
+    for (let y = 0; y < this.h; y += 2) {
+      for (let x = 0; x < this.w; x += 2) {
+        const i = (y * this.w + x) * 4 + 3;
+        if (d[i] > 40) { inkCount++; if (this.tolData[i] > 40) inside++; }
+      }
+    }
+    const precision = inkCount ? inside / inkCount : 0;
+    const covThr = this.guide ? 0.72 : 0.62;
+    const precThr = this.guide ? 0.55 : 0.5;
+    return { coverage, precision, ok: inkCount > 40 && coverage >= covThr && precision >= precThr };
+  }
+}

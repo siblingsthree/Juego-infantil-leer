@@ -1,0 +1,91 @@
+# Bosque de Letras
+
+Juego web para que una niña de 5 años aprenda a **leer y escribir en español**: vocales, consonantes, sílabas directas (ma, me, mi…) y palabras. Todo con **voz** (la del propio navegador) y **escritura con el dedo** corregida automáticamente.
+
+No necesita instalación ni servidor: es HTML, CSS y JavaScript sin dependencias. Funciona en tablet, móvil y ordenador, y se puede instalar como app (PWA) y usar sin conexión.
+
+## Cómo jugar
+
+- Abre `index.html` con un servidor local (`python3 -m http.server`, luego `http://localhost:8000`) o publícalo en GitHub Pages (ver abajo).
+- O abre directamente `dist/bosque-de-letras.html`, que lleva todo en un solo archivo. Se genera con `python3 tools/build-single.py`.
+- Recomendado: Chrome, Edge o Safari en iPad. Son los que traen voces en español de calidad.
+
+## Diseño pedagógico
+
+Sigue el **método silábico** habitual en Infantil: sonidos de las letras, luego sílabas directas (consonante + vocal) y por último palabras decodificables solo con lo aprendido.
+
+| Mundo | Qué aprende | Lecciones |
+|---|---|---|
+| 🌈 Las vocales | A, E, I, O, U | 5 |
+| 🧱 Las letras | consonantes en orden de dificultad: m, p, s, l, t, n, d, f, r, b, c, g, v, z, ñ, j, y, h; cada una con sus sílabas | 18 |
+| 🧩 Las sílabas | mezclas de sílabas de varias letras | 9 |
+| 📖 Las palabras | palabras con dibujo, armadas por sílabas; de 2 a 4 sílabas | 7 |
+
+Cada lección encadena actividades cortas y termina con estrellas y una pegatina para el álbum:
+
+| Actividad | Qué hace la niña | Qué entrena |
+|---|---|---|
+| Conoce | Ve la letra grande con una palabra y su dibujo; toca para oír | Nombre y sonido |
+| Escucha y toca | Oye una letra o sílaba y la elige entre tres | Reconocimiento (lectura) |
+| Forma la sílaba | Oye "mo" y toca la consonante y la vocal | Conciencia fonológica |
+| Traza | Repasa con el dedo la letra guía sobre pauta escolar | Grafía con apoyo |
+| Escribe | Escribe sin guía; hay botón de pista | Grafía sin apoyo |
+| Arma la palabra | Ve el dibujo, oye la palabra y ordena sus sílabas | Síntesis silábica |
+| Lee | Ve la palabra escrita (sin audio) y toca su dibujo | Lectura real |
+
+Detalles que importan a esta edad:
+
+- Las letras se dibujan con la fuente **Andika**, pensada para lectores que empiezan: la "a" y la "g" tienen la forma que se enseña a escribir.
+- Por defecto todo va en **mayúsculas**, como en Infantil. En los ajustes se cambia a minúsculas o a ambas.
+- Nunca hay castigo: tras dos fallos se ilumina la respuesta, y tras dos trazos fallidos aparece "Siguiente".
+- Las lecciones se desbloquean en orden dentro de cada mundo. El "modo libre" de los ajustes abre todas.
+- La "z" solo forma za, zo, zu. La "h" se oye muda. La "c" y la "g" se pronuncian como corresponde ante e, i.
+
+## Corrección del trazo
+
+La letra guía se pinta en un lienzo oculto. Al pulsar "Listo" se miden dos cosas:
+
+- **Cobertura**: qué parte de la letra quedó pintada.
+- **Precisión**: qué parte de la pintura cae dentro de la letra ampliada con un margen de tolerancia.
+
+Con guía se exige 72 % de cobertura y 55 % de precisión; sin guía, 62 % y 50 %. Los umbrales están en `js/tracing.js` (`evaluate`). Se puede ajustar si resulta demasiado fácil o difícil.
+
+## Ajustes para madres y padres
+
+El engranaje de arriba a la derecha pide una suma sencilla (puerta parental). Dentro:
+
+- Tipo de letra: mayúsculas, minúsculas o ambas.
+- Voz y velocidad (las voces las aporta el dispositivo).
+- Modo libre y efectos de sonido.
+- Reiniciar progreso.
+
+El progreso y los ajustes se guardan en el navegador del dispositivo (localStorage). No hay cuentas ni se envía nada a internet.
+
+## Publicar en GitHub Pages
+
+1. En GitHub: Settings → Pages → Source: **GitHub Actions**.
+2. Haz push a `master` (o `main`). El flujo `.github/workflows/pages.yml` publica la web.
+3. Abre la URL que aparece en el flujo. Desde el móvil, "Añadir a pantalla de inicio" la instala como app.
+
+## Estructura
+
+```
+index.html            pantalla única; todo lo demás se dibuja con JS
+css/style.css         estilos, tema claro y oscuro
+js/data.js            letras, sílabas, palabras, mundos y lecciones
+js/store.js           ajustes y progreso (localStorage)
+js/audio.js           voz (Web Speech API) y efectos (WebAudio)
+js/tracing.js         lienzo de trazado y corrección
+js/confetti.js        celebración
+js/activities.js      las actividades y la secuencia de cada lección
+js/app.js             navegación, lección, resumen, álbum y ajustes
+sw.js, manifest.webmanifest, icon.svg   instalación como app y uso sin conexión
+tools/build-single.py genera dist/bosque-de-letras.html (un solo archivo)
+```
+
+## Limitaciones conocidas y siguientes pasos
+
+- La voz depende del dispositivo. Sin voz en español el juego funciona, pero en silencio. Un siguiente paso natural es grabar audios propios (o generarlos con un servicio de voz) y guardarlos en `audio/`.
+- La síntesis de voz dice el **nombre** de la consonante ("eme"), no su sonido aislado. Por eso el juego apoya siempre en las sílabas, que sí suenan bien.
+- El trazo se corrige por forma, no por orden de los trazos. Añadir flechas de dirección por letra sería la siguiente mejora de escritura.
+- Para añadir palabras: una línea en `js/data.js` con sílabas, emoji y nivel, y añadirla a una lección.

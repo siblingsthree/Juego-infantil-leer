@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>Bosque de Letras</title>
+<meta name="description" content="Juego para aprender a leer y escribir en español: vocales, consonantes, sílabas y palabras, con voz y trazado con el dedo.">
+<meta name="theme-color" content="#3BA3F0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Bosque de Letras">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233BA3F0'/%3E%3Ctext x='32' y='46' font-size='40' text-anchor='middle' font-family='Arial' font-weight='bold' fill='white'%3EA%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;900&family=Andika:wght@400;700&display=swap">
+<!-- build:css -->
+<link rel="stylesheet" href="css/style.css">
+<!-- endbuild -->
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <button id="btn-back" class="icon-btn" aria-label="Volver" hidden>←</button>
+    <div id="top-title" class="top-title">Bosque de Letras</div>
+    <div id="dots" class="dots" aria-hidden="true"></div>
+    <button id="btn-settings" class="icon-btn" aria-label="Ajustes para madres y padres">⚙️</button>
+  </header>
+  <main id="screen" class="screen"></main>
+</div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+<div id="modal" class="modal" hidden></div>
+<!-- build:js -->
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/tracing.js"></script>
+<script src="js/confetti.js"></script>
+<script src="js/activities.js"></script>
+<script src="js/app.js"></script>
+<!-- endbuild -->
+</body>
+</html>

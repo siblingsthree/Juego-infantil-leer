@@ -1,0 +1,15 @@
+{
+  "name": "Bosque de Letras",
+  "short_name": "Letras",
+  "description": "Juego para aprender a leer y escribir en español: letras, sílabas y palabras con voz y trazado.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#EAF4EC",
+  "theme_color": "#3BA3F0",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
