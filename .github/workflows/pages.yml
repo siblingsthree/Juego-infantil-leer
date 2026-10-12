@@ -1,7 +1,7 @@
 name: Publicar en GitHub Pages
 on:
   push:
-    branches: [master, main, claude/bosque-de-letras]
+    branches: [claude/bosque-de-letras]
   workflow_dispatch:
 permissions:
   contents: read
