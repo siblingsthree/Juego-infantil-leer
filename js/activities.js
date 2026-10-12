@@ -187,8 +187,7 @@ A.buildWord = (word, lessonWords) => async (root, api) => {
         pos++;
         if (pos === word.s.length) {
           done = true; slots.forEach(s => s.classList.add('correct')); api.sfx('ok');
-          await api.say(word.w);
-          await api.praise();
+          await api.praise(`${word.w}. ${U.pick(DATA.PRAISES)}`);
           resolve(first);
         } else {
           api.say(t.dataset.v);
@@ -224,8 +223,7 @@ A.readWord = (word, lessonWords) => async (root, api) => {
       if (done) return;
       if (card.dataset.v === word.w) {
         done = true; card.classList.add('correct'); api.sfx('ok');
-        api.say(word.w);
-        await api.praise();
+        await api.praise(`${word.w}. ${U.pick(DATA.PRAISES)}`);
         resolve(first);
       } else {
         first = false; api.sfx('no');
@@ -487,10 +485,10 @@ function speakActivity({ kind, target, display, promptText, promptSpoken, modelS
         }
         if (attempts >= 1) addSelf();
         if (attempts >= 2) addSkip();
-        if (selfBtn) selfBtn.onclick = () => { if (done) return; done = true; api.sfx('ok'); api.say(modelSpoken); resolve(false); };
+        if (selfBtn) selfBtn.onclick = async () => { if (done) return; done = true; api.sfx('ok'); await Promise.race([api.say(modelSpoken), U.wait(4000)]); resolve(false); };
         if (skipBtn) skipBtn.onclick = () => { if (done) return; done = true; resolve(false); };
       };
-      if (selfBtn) selfBtn.onclick = () => { if (done) return; done = true; api.sfx('ok'); api.say(modelSpoken); resolve(false); };
+      if (selfBtn) selfBtn.onclick = async () => { if (done) return; done = true; api.sfx('ok'); await Promise.race([api.say(modelSpoken), U.wait(4000)]); resolve(false); };
     });
     return { hits: ok ? 1 : 0, total: 1 };
   };
@@ -552,8 +550,7 @@ A.initialSound = (letters, rounds) => async (root, api) => {
         if (done) return;
         if (card.dataset.v === item.l) {
           done = true; card.classList.add('correct'); api.sfx('ok');
-          api.say(`${item.w} empieza por ${letterName(item.l)}.`);
-          await api.praise();
+          await api.praise(`${item.w} empieza por ${letterName(item.l)}. ${U.pick(DATA.PRAISES)}`);
           resolve(first);
         } else {
           first = false; wrong++; api.sfx('no');
@@ -600,8 +597,7 @@ A.clapSyllables = (rounds) => async (root, api) => {
         if (n === item.n) {
           done = true; b.classList.add('correct'); api.sfx('ok');
           reveal.innerHTML = item.s.map(x => `<span class="syl-chip">${U.esc(fmtText(x))}</span>`).join('');
-          api.say(`${item.s.join(', ')}. ${item.n === 1 ? 'Una palmada' : item.n + ' palmadas'}.`);
-          await api.praise();
+          await api.praise(`${item.s.join(', ')}. ${item.n === 1 ? 'Una palmada' : item.n + ' palmadas'}. ${U.pick(DATA.PRAISES)}`);
           resolve(first);
         } else {
           first = false; api.sfx('no');
@@ -714,8 +710,7 @@ A.missingSyllable = (word, lessonWords) => async (root, api) => {
       if (done) return;
       if (t.dataset.v === missing) {
         done = true; gap.textContent = fmtText(missing); gap.classList.add('correct'); t.classList.add('used'); api.sfx('ok');
-        api.say(word.s.join(', ') + '. ' + word.w);
-        await api.praise();
+        await api.praise(word.s.join(', ') + '. ' + word.w + '. ' + U.pick(DATA.PRAISES));
         resolve(first);
       } else {
         first = false; api.sfx('no');
@@ -783,8 +778,7 @@ A.dictation = (word) => async (root, api) => {
         slots[pos].textContent = fmtText(t.dataset.v); slots[pos].classList.add('filled'); pos++;
         if (pos === letters.length) {
           done = true; slots.forEach(s => s.classList.add('correct')); api.sfx('ok');
-          await api.say(word.w);
-          await api.praise();
+          await api.praise(`${word.w}. ${U.pick(DATA.PRAISES)}`);
           resolve(first);
         } else api.say(letterName(t.dataset.v));
       } else {
@@ -933,8 +927,7 @@ A.orderSentence = (sentence) => async (root, api) => {
         slots[pos].textContent = fmtText(sentence.words[i]); slots[pos].classList.add('filled'); pos++;
         if (pos === sentence.words.length) {
           done = true; slots.forEach(s => s.classList.add('correct')); api.sfx('ok');
-          await api.say(sentence.t);
-          await api.praise('Has ordenado la frase entera.');
+          await api.praise(`${sentence.t} Has ordenado la frase entera.`);
           resolve(first);
         } else api.say(sentence.words[i]);
       } else {

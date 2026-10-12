@@ -102,8 +102,9 @@ const App = (() => {
       praise: async (text) => {
         // Confeti solo a veces, para que no sea previsible (Deci 1999: la recompensa esperada desmotiva).
         if (Math.random() < 0.4) Confetti.burst(50);
-        Voice.say(text || U.pick(DATA.PRAISES));
-        await U.wait(1100);
+        // Se espera a que la voz termine (con tope), porque la siguiente pantalla cancela lo que esté sonando.
+        await Promise.race([Voice.say(text || U.pick(DATA.PRAISES)), U.wait(6000)]);
+        await U.wait(300);
       },
     };
     Session.start();
