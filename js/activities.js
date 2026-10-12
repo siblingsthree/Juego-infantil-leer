@@ -40,7 +40,7 @@ A.intro = letter => async (root, api) => {
       <button class="example" id="ex"><span class="emoji">${info.emoji}</span><span class="word font-letters">${U.esc(fmtText(info.word))}</span></button>
       ${syls.length ? `<div class="tiles" id="syls">${syls.map(s => `<button class="tile font-letters" data-s="${s}">${U.esc(fmtText(s))}</button>`).join('')}</div>` : ''}
     </div>
-    <div class="actions"><button class="btn primary big" id="next">Siguiente ➜</button></div>`;
+    <div class="actions"><button class="btn primary big" id="next" data-say="Siguiente"><span class="ico">➡️</span>Siguiente</button></div>`;
   const speech = vowel
     ? `Esta es la letra ${info.name}. ${info.name}, de ${info.word}.`
     : `Esta es la letra ${info.name}. ${info.name}, de ${info.word}. Con ella decimos: ${syls.join(', ')}.`;
@@ -207,7 +207,7 @@ A.readWord = (word, lessonWords) => async (root, api) => {
     ${promptHTML('Lee la palabra y toca su dibujo')}
     <div class="read-word font-letters" id="rw">${U.esc(fmtText(word.w))}</div>
     <div class="cards" id="cards">${options.map(o => `<button class="card emoji-card" data-v="${U.esc(o.w)}" aria-label="${U.esc(o.w)}">${o.e}</button>`).join('')}</div>
-    <div class="actions"><button class="btn ghost" id="help">🔊 Ayúdame a leer</button></div>`;
+    <div class="actions"><button class="btn ghost" id="help" data-say="Ayuda para leer"><span class="ico">🙋</span>Ayúdame</button></div>`;
   root.querySelector('#sp').onclick = () => api.say('Lee la palabra y toca su dibujo.');
   api.say('Lee la palabra. ¿Qué dice? Toca su dibujo.');
   const cards = [...root.querySelectorAll('.card')];
@@ -241,9 +241,9 @@ A.trace = (text, { guide = true, spoken = null } = {}) => async (root, api) => {
     ${promptHTML(guide ? `Sigue los puntos: <b class="font-letters">${U.esc(fmtText(text))}</b>` : `Escribe tú: <b>${U.esc(speakText)}</b>`)}
     <div class="trace-wrap"><canvas id="tc" aria-label="Zona para escribir"></canvas></div>
     <div class="actions trace-actions">
-      <button class="btn ghost" id="clear">↺ Borrar</button>
-      ${guide ? '' : '<button class="btn ghost" id="hint">💡 Pista</button>'}
-      <button class="btn primary big" id="done" disabled>✔ Listo</button>
+      <button class="btn ghost" id="clear" data-say="Borrar todo"><span class="ico">🧽</span>Borrar</button>
+      ${guide ? '' : '<button class="btn ghost" id="hint" data-say="Pista: ver la letra"><span class="ico">💡</span>Pista</button>'}
+      <button class="btn good big" id="done" disabled data-say="Listo: comprobar"><span class="ico">✅</span>Listo</button>
     </div>`;
   root.querySelector('#sp').onclick = () => api.say(spokenMsg);
   api.say(spokenMsg);
@@ -274,7 +274,7 @@ A.trace = (text, { guide = true, spoken = null } = {}) => async (root, api) => {
       tracer.showHint(3500);
       if (attempts >= 2 && !skip) {
         skip = document.createElement('button');
-        skip.className = 'btn ghost'; skip.textContent = 'Siguiente ➜';
+        skip.className = 'btn ghost'; skip.dataset.say = 'Siguiente'; skip.innerHTML = '<span class="ico">➡️</span>Siguiente';
         root.querySelector('.trace-actions').appendChild(skip);
       }
     }
@@ -351,7 +351,7 @@ function speakActivity({ kind, target, display, promptText, promptSpoken, modelS
       ${promptHTML(promptText)}
       <div class="say">
         ${display}
-        <button class="mic-btn" id="mic" aria-label="Hablar"><span class="mic-icon">🎤</span><span class="mic-label">Dilo tú</span></button>
+        <button class="mic-btn" id="mic" aria-label="Hablar" data-say="Micrófono para hablar"><span class="mic-icon">🎤</span><span class="mic-label">Dilo tú</span></button>
         <p class="heard" id="heard" aria-live="polite"></p>
       </div>
       <div class="actions" id="say-actions"></div>`;
@@ -367,13 +367,13 @@ function speakActivity({ kind, target, display, promptText, promptSpoken, modelS
     const addSelf = () => {
       if (selfBtn) return;
       selfBtn = document.createElement('button');
-      selfBtn.className = 'btn ghost'; selfBtn.textContent = '✔ Ya lo dije';
+      selfBtn.className = 'btn ghost'; selfBtn.dataset.say = 'Ya lo dije'; selfBtn.innerHTML = '<span class="ico">👍</span>Ya lo dije';
       actions.appendChild(selfBtn);
     };
     const addSkip = () => {
       if (skipBtn) return;
       skipBtn = document.createElement('button');
-      skipBtn.className = 'btn ghost'; skipBtn.textContent = 'Siguiente ➜';
+      skipBtn.className = 'btn ghost'; skipBtn.dataset.say = 'Siguiente'; skipBtn.innerHTML = '<span class="ico">➡️</span>Siguiente';
       actions.appendChild(skipBtn);
     };
     if (!Listen.supported) {

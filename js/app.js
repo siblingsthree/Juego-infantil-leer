@@ -37,7 +37,7 @@ const App = (() => {
         </div>
         <div class="worlds">
           ${DATA.WORLDS.map(w => `
-            <button class="world world-${w.color}" data-w="${w.id}">
+            <button class="world world-${w.color}" data-w="${w.id}" data-say="${U.esc(w.title)}">
               <span class="world-emoji">${w.emoji}</span>
               <span class="world-title">${U.esc(w.title)}</span>
               <span class="world-hint">${U.esc(w.hint)}</span>
@@ -46,7 +46,7 @@ const App = (() => {
             </button>`).join('')}
         </div>
         <div class="home-foot">
-          <button class="btn ghost" id="album">🏆 Mi álbum (${Progress.load().stickers.length})</button>
+          <button class="btn ghost" id="album" data-say="Mi álbum de pegatinas"><span class="ico">🏆</span>Mi álbum (${Progress.load().stickers.length})</button>
           <span class="muted">${done} de ${total} lecciones</span>
         </div>
       </section>`;
@@ -67,7 +67,8 @@ const App = (() => {
         ${w.lessons.map((l, i) => {
           const unlocked = Progress.isUnlocked(w, i);
           const st = Progress.stars(l.id);
-          return `<button class="lesson ${unlocked ? '' : 'locked'} ${st ? 'done' : ''}" data-i="${i}" ${unlocked ? '' : 'aria-disabled="true"'}>
+          const sayName = l.letter ? (DATA.VOWELS.includes(l.letter) ? `La vocal ${l.letter}` : `La letra ${DATA.LETTERS[l.letter].name}`) : l.title;
+          return `<button class="lesson ${unlocked ? '' : 'locked'} ${st ? 'done' : ''}" data-i="${i}" data-say="${U.esc(unlocked ? sayName : 'Cerrado. Primero termina la lección anterior')}" ${unlocked ? '' : 'aria-disabled="true"'}>
             <span class="lesson-emoji">${unlocked ? l.emoji : '🔒'}</span>
             <span class="lesson-title font-letters">${U.esc(l.title)}</span>
             ${starsHtml(st)}
@@ -135,9 +136,9 @@ const App = (() => {
         <h2>¡Lección completada!</h2>
         ${firstTime ? `<p class="sticker-earned">Nueva pegatina para tu álbum: <span class="emoji">${l.emoji}</span></p>` : '<p class="muted">Ya tenías esta pegatina. ¡Buen repaso!</p>'}
         <div class="actions column">
-          ${next ? `<button class="btn primary big" id="next">Siguiente: ${U.esc(next.title)} ➜</button>` : '<button class="btn primary big" id="home">🏡 Volver al bosque</button>'}
-          <button class="btn ghost" id="again">↺ Repetir</button>
-          <button class="btn ghost" id="list">📋 Ver lecciones</button>
+          ${next ? `<button class="btn primary big" id="next" data-say="Siguiente lección"><span class="ico">➡️</span>Siguiente: ${U.esc(next.title)}</button>` : '<button class="btn primary big" id="home" data-say="Volver al bosque"><span class="ico">🏡</span>Volver al bosque</button>'}
+          <button class="btn ghost" id="again" data-say="Jugar otra vez"><span class="ico">🔁</span>Otra vez</button>
+          <button class="btn ghost" id="list" data-say="Ver las lecciones"><span class="ico">📋</span>Lecciones</button>
         </div>
       </section>`;
     const q = s => screen.querySelector(s);
@@ -217,6 +218,10 @@ const App = (() => {
         <input type="checkbox" id="freeMode" ${s.freeMode ? 'checked' : ''}>
       </div>
       <div class="field row">
+        <label for="twoTap">Doble toque con voz: el primer toque dice qué hace el botón y el segundo lo hace</label>
+        <input type="checkbox" id="twoTap" ${s.twoTap ? 'checked' : ''}>
+      </div>
+      <div class="field row">
         <label for="soundFx">Efectos de sonido</label>
         <input type="checkbox" id="soundFx" ${s.soundFx ? 'checked' : ''}>
       </div>
@@ -235,6 +240,7 @@ const App = (() => {
     q('#rate').oninput = e => { q('#rateOut').value = e.target.value; Settings.set({ rate: +e.target.value }); };
     q('#freeMode').onchange = e => Settings.set({ freeMode: e.target.checked });
     q('#soundFx').onchange = e => Settings.set({ soundFx: e.target.checked });
+    q('#twoTap').onchange = e => Settings.set({ twoTap: e.target.checked });
     q('#test').onclick = () => Voice.say('Hola. Vamos a jugar con las letras: ma, me, mi, mo, mu.');
     q('#close').onclick = () => { closeModal(); refresh(); };
     q('#reset').onclick = () => {

@@ -35,7 +35,10 @@ Cada lección encadena actividades cortas y termina con estrellas y una pegatina
 | Dilo tú | Ve "P + A = ?", oye "¿la pe con la a?" y lo dice al micrófono | Lectura en voz alta de sílabas |
 | Lee en voz alta | Ve la palabra con su dibujo y la lee al micrófono | Lectura en voz alta de palabras |
 
-Detalles que importan a esta edad:
+Detalles que importan a esta edad (4 a 7 años, muchos aún no leen):
+
+- **Doble toque con voz**: los botones de acción y navegación (siguiente, borrar, listo, pista, volver, mundos, lecciones, micrófono) dicen en voz alta qué hacen al primer toque y se quedan marcados con un anillo amarillo y un dedo; el segundo toque, antes de 4 segundos, ejecuta la acción. Las respuestas de los ejercicios (tarjetas de letras, fichas de sílabas, dibujos) son de un solo toque: si dijeran su letra al tocarlas, bastaría con ir probando hasta oír la correcta. Se desactiva en los ajustes para niños que ya leen.
+- Botones con icono grande además del texto, de al menos 64 px de alto.
 
 - Las letras se dibujan con la fuente **Andika**, pensada para lectores que empiezan: la "a" y la "g" tienen la forma que se enseña a escribir.
 - Por defecto todo va en **mayúsculas**, como en Infantil. En los ajustes se cambia a minúsculas o a ambas.
@@ -81,7 +84,7 @@ El engranaje de arriba a la derecha pide una suma sencilla (puerta parental). De
 
 - Tipo de letra: mayúsculas, minúsculas o ambas.
 - Voz y velocidad (las voces las aporta el dispositivo).
-- Modo libre y efectos de sonido.
+- Doble toque con voz (activado por defecto), modo libre y efectos de sonido.
 - Reiniciar progreso.
 
 El progreso y los ajustes se guardan en el navegador del dispositivo (localStorage). No hay cuentas ni se envía nada a internet.
@@ -102,6 +105,7 @@ js/store.js           ajustes y progreso (localStorage)
 js/audio.js           voz (Web Speech API) y efectos (WebAudio)
 js/tracing.js         lienzo de trazado y corrección
 js/confetti.js        celebración
+js/twotap.js          doble toque con voz en los botones de acción
 js/activities.js      las actividades y la secuencia de cada lección
 js/app.js             navegación, lección, resumen, álbum y ajustes
 sw.js, manifest.webmanifest, icon.svg   instalación como app y uso sin conexión
