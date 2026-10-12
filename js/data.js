@@ -89,7 +89,22 @@ const DATA = (() => {
     W('queso', ['que', 'so'], '🧀', 3), W('coche', ['co', 'che'], '🚗', 3), W('leche', ['le', 'che'], '🥛', 3),
     W('llave', ['lla', 've'], '🔑', 3), W('pollo', ['po', 'llo'], '🐔', 3), W('gallina', ['ga', 'lli', 'na'], '🐓', 3),
     W('chocolate', ['cho', 'co', 'la', 'te'], '🍫', 3), W('cebolla', ['ce', 'bo', 'lla'], '🧅', 3), W('máquina', ['má', 'qui', 'na'], '🤖', 3),
+    // Nivel 4: sílabas inversas (al, es), cerradas (sol, pan) y trabadas (pla, tre).
+    W('sol', ['sol'], '☀️', 4), W('pan', ['pan'], '🍞', 4), W('mar', ['mar'], '🌊', 4), W('pez', ['pez'], '🐟', 4),
+    W('luz', ['luz'], '💡', 4), W('tren', ['tren'], '🚂', 4), W('flor', ['flor'], '🌸', 4),
+    W('isla', ['is', 'la'], '🏝️', 4), W('árbol', ['ár', 'bol'], '🌳', 4), W('limón', ['li', 'món'], '🍋', 4),
+    W('melón', ['me', 'lón'], '🍈', 4), W('ratón', ['ra', 'tón'], '🐭', 4), W('jamón', ['ja', 'món'], '🍖', 4),
+    W('balón', ['ba', 'lón'], '🏀', 4), W('pastel', ['pas', 'tel'], '🎂', 4), W('tambor', ['tam', 'bor'], '🥁', 4),
+    W('pulpo', ['pul', 'po'], '🐙', 4), W('cerdo', ['cer', 'do'], '🐷', 4), W('delfín', ['del', 'fín'], '🐬', 4),
+    W('plato', ['pla', 'to'], '🍽️', 4), W('globo', ['glo', 'bo'], '🎈', 4), W('fresa', ['fre', 'sa'], '🍓', 4),
+    W('bruja', ['bru', 'ja'], '🧙', 4), W('cebra', ['ce', 'bra'], '🦓', 4), W('tigre', ['ti', 'gre'], '🐯', 4),
+    W('dragón', ['dra', 'gón'], '🐉', 4), W('tortuga', ['tor', 'tu', 'ga'], '🐢', 4), W('estrella', ['es', 'tre', 'lla'], '⭐', 4),
+    W('princesa', ['prin', 'ce', 'sa'], '👸', 4), W('elefante', ['e', 'le', 'fan', 'te'], '🐘', 4), W('caracol', ['ca', 'ra', 'col'], '🐌', 4),
   ];
+  /* Unidades para el mundo "Sílabas 2". */
+  const INVERSE = ['al', 'el', 'il', 'ol', 'ul', 'as', 'es', 'is', 'os', 'us', 'an', 'en', 'in', 'on', 'un', 'ar', 'er', 'ir', 'or', 'ur'];
+  const BLENDS_L = ['pla', 'ple', 'pli', 'plo', 'plu', 'bla', 'ble', 'blo', 'cla', 'clo', 'fla', 'flo', 'gla', 'glo'];
+  const BLENDS_R = ['pra', 'pre', 'pri', 'pro', 'bra', 'bre', 'tra', 'tre', 'tri', 'cra', 'cro', 'fra', 'fre', 'gra', 'gri', 'dra', 'dro'];
   const wordByText = Object.fromEntries(WORDS.map(x => [x.w, x]));
 
   // Palabras extra para los juegos de conciencia fonológica (no hace falta que sean decodificables).
@@ -108,6 +123,42 @@ const DATA = (() => {
     { w: 'sol', e: '☀️' }, { w: 'pan', e: '🍞' }, { w: 'tren', e: '🚂' }, { w: 'flor', e: '🌸' },
     { w: 'pez', e: '🐟' }, { w: 'luz', e: '💡' }, { w: 'mar', e: '🌊' }, { w: 'pie', e: '🦶' },
   ];
+  /* Frases decodificables con palabras del juego más unas pocas palabras de uso (el, la, un, una, y, mi, es, con).
+     e = escena de dos emojis para elegir la frase leída. */
+  const S = (t, e, tier = 1) => ({ t, e, words: t.replace('.', '').split(' '), tier });
+  const SENTENCES = [
+    S('Mamá toma sopa.', '👩🍲'), S('Papá mira la luna.', '👨🌙'), S('El oso come uva.', '🐻🍇', 2),
+    S('El mono mira la moto.', '🐒🛵'), S('El pato mira la ola.', '🦆🌊'), S('Mi mamá mira el mapa.', '👩🗺️'),
+    S('El sapo mira la luna.', '🐸🌙'), S('La niña toma la pelota.', '👧⚽', 2), S('El oso toma la pelota.', '🐻⚽'),
+    S('La niña toma la lupa.', '👧🔍', 2), S('Papá toma la paleta.', '👨🍭'), S('El mono come la patata.', '🐒🥔'),
+    S('El gato come pan.', '🐱🍞', 2), S('La vaca mira el sol.', '🐄☀️', 2), S('La rana come un tomate.', '🐸🍅', 2),
+    S('El conejo come la seta.', '🐰🍄', 2), S('La abeja mira la rosa.', '🐝🌹', 2), S('Papá toma café.', '👨☕', 2),
+    S('La paloma mira el pino.', '🕊️🌲'), S('Mi papá come banana.', '👨🍌', 2), S('El gato mira el pato.', '🐱🦆', 2),
+    S('El mono come coco.', '🐒🥥', 2), S('La jirafa come la hoja.', '🦒🍃', 2), S('El pavo mira la cometa.', '🦃🪁', 2),
+    S('El bebé toma leche.', '👶🥛', 3), S('La gallina mira el coche.', '🐓🚗', 3), S('El pollo come queso.', '🐔🧀', 3),
+  ];
+  /* Mini-cuentos: 4 frases con escena y una pregunta de comprensión con tres dibujos. */
+  const STORIES = [
+    { id: 'st-lola', title: 'Lola y la luna', emoji: '🌙', tier: 1,
+      lines: [S('Lola mira la luna.', '👧🌙'), S('La luna es bonita.', '🌙✨'), S('Lola toma la lupa.', '👧🔍'), S('Mira la luna con la lupa.', '🔍🌙')],
+      q: { t: '¿Qué toma Lola?', options: ['🔍', '⚽', '🍲'], ok: '🔍' } },
+    { id: 'st-oso', title: 'El oso y la pelota', emoji: '⚽', tier: 1,
+      lines: [S('El oso toma la pelota.', '🐻⚽'), S('El oso tira la pelota.', '🐻💨'), S('El mono la toma.', '🐒⚽'), S('El mono y el oso ríen.', '🐒🐻')],
+      q: { t: '¿Quién toma la pelota al final?', options: ['🐒', '🐻', '🐱'], ok: '🐒' } },
+    { id: 'st-sopa', title: 'La sopa de mamá', emoji: '🍲', tier: 1,
+      lines: [S('Mamá pone la sopa.', '👩🍲'), S('Papá toma la sopa.', '👨🍲'), S('La niña toma la sopa.', '👧🍲'), S('La sopa es de tomate.', '🍲🍅')],
+      q: { t: '¿De qué es la sopa?', options: ['🍅', '🍌', '🍇'], ok: '🍅' } },
+    { id: 'st-pato', title: 'El pato y la ola', emoji: '🦆', tier: 1,
+      lines: [S('El pato mira la ola.', '🦆🌊'), S('La ola moja al pato.', '🌊💦'), S('El pato toma el sol.', '🦆☀️'), S('De noche mira la luna.', '🦆🌙')],
+      q: { t: '¿Qué mira el pato de noche?', options: ['🌙', '☀️', '🌊'], ok: '🌙' } },
+    { id: 'st-gato', title: 'El gato y el pan', emoji: '🐱', tier: 2,
+      lines: [S('El gato mira el pan.', '🐱🍞'), S('Mamá le da pan.', '👩🍞'), S('El gato come el pan.', '🐱🍞'), S('Y toma leche.', '🐱🥛')],
+      q: { t: '¿Qué toma el gato?', options: ['🥛', '🍞', '🍲'], ok: '🥛' } },
+    { id: 'st-jirafa', title: 'La jirafa y la abeja', emoji: '🦒', tier: 2,
+      lines: [S('La jirafa mira la hoja.', '🦒🍃'), S('La jirafa come la hoja.', '🦒🍃'), S('La abeja mira la rosa.', '🐝🌹'), S('La jirafa mira la abeja.', '🦒🐝')],
+      q: { t: '¿Qué come la jirafa?', options: ['🍃', '🌹', '🍇'], ok: '🍃' } },
+  ];
+
   /* Todas las palabras con su letra inicial (la h es muda: se excluye de este juego). */
   function initialWords() {
     const fromWords = WORDS.map(x => ({ w: x.w, e: x.e, l: x.w[0] }));
@@ -169,6 +220,29 @@ const DATA = (() => {
       ],
     },
     {
+      id: 'silabas2', title: 'Sílabas 2', emoji: '🔤', color: 'teal',
+      hint: 'Inversas (al, es), palabras cerradas (sol, pan) y trabadas (pla, tre).',
+      lessons: [
+        { id: 's2-inv1', title: 'Al, es, in', emoji: '🏝️', type: 'units', units: ['al', 'el', 'es', 'is', 'in', 'an', 'un', 'en'], words: pick('isla', 'árbol', 'estrella', 'elefante') },
+        { id: 's2-inv2', title: 'Ar, or, us', emoji: '🐢', type: 'units', units: ['ar', 'or', 'er', 'ir', 'os', 'us', 'as', 'ol'], words: pick('árbol', 'tortuga', 'isla', 'estrella') },
+        { id: 's2-cerradas', title: 'Sol, pan, mar', emoji: '☀️', type: 'closed', words: pick('sol', 'pan', 'mar', 'pez', 'luz', 'tren', 'flor') },
+        { id: 's2-cerradas2', title: 'Limón, balón', emoji: '🍋', type: 'closed', words: pick('limón', 'melón', 'ratón', 'jamón', 'balón', 'pastel', 'tambor', 'pulpo', 'cerdo', 'delfín') },
+        { id: 's2-bl', title: 'Pla, bla, cla', emoji: '🍽️', type: 'units', units: BLENDS_L, words: pick('plato', 'globo', 'flor') },
+        { id: 's2-br', title: 'Pra, bra, tra', emoji: '🐯', type: 'units', units: BLENDS_R, words: pick('fresa', 'bruja', 'cebra', 'tigre', 'dragón', 'tren') },
+        { id: 's2-largas', title: 'Palabras largas 2', emoji: '🐉', type: 'closed', words: pick('tortuga', 'estrella', 'princesa', 'elefante', 'caracol', 'dragón', 'cebra', 'tigre', 'plato', 'globo', 'fresa', 'bruja') },
+      ],
+    },
+    {
+      id: 'frases', title: 'Las frases', emoji: '📚', color: 'purple',
+      hint: 'Lee frases y mini-cuentos con las palabras que ya conoce.',
+      lessons: [
+        { id: 'f-1', title: 'Frases 1', emoji: '👩', type: 'sentences', sentences: SENTENCES.filter(x => x.tier === 1) },
+        { id: 'f-2', title: 'Frases 2', emoji: '🐻', type: 'sentences', sentences: SENTENCES.filter(x => x.tier <= 2) },
+        ...STORIES.map(st => ({ id: st.id, title: st.title, emoji: st.emoji, type: 'story', story: st })),
+        { id: 'f-3', title: 'Frases 3', emoji: '🐔', type: 'sentences', sentences: SENTENCES },
+      ],
+    },
+    {
       id: 'juegos', title: 'Los juegos', emoji: '🎪', color: 'pink', free: true,
       hint: 'Juegos sueltos con las letras que ya conoce. Siempre abiertos.',
       lessons: [
@@ -192,9 +266,13 @@ const DATA = (() => {
     vowel: l => `Buscad por casa tres cosas que empiecen por "${l}" y decidlas alargando el sonido.`,
     consonant: l => `Escribid la ${l.toUpperCase()} grande con el dedo en harina, arena o en la espalda, y decid su sonido mientras.`,
     syllables: () => 'Dad palmadas con los nombres de la familia: ma-má, pa-pá, y contad cuántas tienen.',
+    units: () => 'Buscad por casa palabras que acaben en "l" o en "n" (sol, pan, balón) y decid el final muy claro.',
+    closed: () => 'Escribid en un papel tres palabras cortas (sol, pan, mar) y dibujad al lado lo que son.',
+    sentences: () => 'Escribe una frase corta en un papel con palabras que conoce y que la lea en voz alta a alguien de casa.',
+    story: () => 'Leed juntos un cuento en papel: tú lees y ella busca en la página una palabra que conozca.',
     words: () => 'Leed juntos un cuento en papel: la niña busca una palabra que conozca y tú lees el resto.',
     game: () => 'Jugad al "veo veo" con sonidos: "veo veo una cosa que empieza por sss".',
   };
 
-  return { VOWELS, CONSONANTS, CONTINUOUS, LETTERS, WORDS, WORLDS, PRAISES, PRAISES_RETRY, RETRY, FAMILY_TIPS, syllablesFor, wordByText, initialWords, syllableCountWords };
+  return { VOWELS, CONSONANTS, CONTINUOUS, LETTERS, WORDS, WORLDS, SENTENCES, STORIES, INVERSE, BLENDS_L, BLENDS_R, PRAISES, PRAISES_RETRY, RETRY, FAMILY_TIPS, syllablesFor, wordByText, initialWords, syllableCountWords };
 })();

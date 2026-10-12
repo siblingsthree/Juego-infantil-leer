@@ -1,6 +1,6 @@
 /* Service worker: deja el juego disponible sin conexión tras la primera visita. */
-const CACHE = 'bosque-letras-v2';
-const ASSETS = ['./', 'index.html', 'css/style.css', 'js/data.js', 'js/store.js', 'js/audio.js', 'js/tracing.js', 'js/confetti.js', 'js/twotap.js', 'js/activities.js', 'js/app.js', 'icon.svg', 'manifest.webmanifest'];
+const CACHE = 'bosque-letras-v4';
+const ASSETS = ['./', 'index.html', 'css/style.css', 'js/data.js', 'js/store.js', 'js/audio.js', 'js/strokes.js', 'js/tracing.js', 'js/confetti.js', 'js/twotap.js', 'js/activities.js', 'js/app.js', 'icon.svg', 'manifest.webmanifest', 'fichas.html'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });

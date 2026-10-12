@@ -20,6 +20,8 @@ Sigue el **método silábico** habitual en Infantil: sonidos de las letras, lueg
 | 🧱 Las letras | consonantes en orden de dificultad: m, p, s, l, t, n, d, f, r, b, c (ca/co/cu y ce/ci aparte), g (ga/go/gu y ge/gi aparte), v, z, ñ, j, y, h (muda), y las letras dobles qu, ch, ll | 23 |
 | 🧩 Las sílabas | mezclas de sílabas de varias letras | 9 |
 | 📖 Las palabras | palabras con dibujo, armadas por sílabas; de 2 a 4 sílabas; "Letras dobles" al final | 8 |
+| 🔤 Sílabas 2 | sílabas inversas (al, es, un), palabras cerradas (sol, pan, limón) y trabadas (pla, bra, tre) | 7 |
+| 📚 Las frases | frases decodificables con escena, ordenar frases, leer en voz alta y seis mini-cuentos con pregunta de comprensión | 9 |
 | 🎪 Los juegos | juegos sueltos, siempre abiertos, que usan las letras ya trabajadas, más un repaso espaciado | 8 |
 
 Cada lección encadena actividades cortas y termina con estrellas y una pegatina para el álbum:
@@ -44,6 +46,10 @@ Cada lección encadena actividades cortas y termina con estrellas y una pegatina
 | Dictado | Oye la palabra y la escribe letra a letra con fichas | Ortografía y segmentación en fonemas |
 
 | Repaso | Las letras completadas hace más tiempo vuelven a salir | Recuperación espaciada |
+| Forma la sílaba (letras) | Sílaba inversa o trabada tocando sus letras en orden | Síntesis fonémica |
+| Lee la frase | Lee una frase (cada palabra se puede oír al tocarla) y toca su escena | Lectura de frases |
+| Ordena | Oye la frase y ordena sus palabras | Sintaxis y memoria de la frase |
+| Cuento | Cuatro frases con escena, lectura con resaltado palabra a palabra y una pregunta con tres dibujos | Comprensión lectora |
 
 El mundo 🎪 Los juegos usa las letras que ya tienen estrella (si aún no hay ninguna, m, p y s) y palabras del nivel alcanzado, así que crece con la niña. Varios de estos juegos también aparecen dentro de las lecciones de vocales, consonantes y palabras.
 
@@ -73,6 +79,11 @@ Detalles que importan a esta edad (4 a 7 años, muchos aún no leen):
 ## Sonido de las letras
 
 La voz sintetizada no sabe pronunciar un fonema aislado (/m/ sin vocal), así que el juego presenta cada consonante por su sonido en contexto ("suena como en mono: mo, ma, me...") y deja el nombre ("se llama eme") como dato secundario. Si grabas tus propios audios en `audio/sonidos/<letra>.mp3` (por ejemplo `m.mp3` con "mmm"), el juego los usa automáticamente al tocar la letra grande. Es la mejora de más valor pedagógico pendiente.
+
+## Animación del trazo y fichas en papel
+
+- Al trazar una letra con guía, un lápiz recorre primero la letra en el orden y dirección escolares (letras de palo desde arriba a la izquierda; redondas desde arriba a la derecha girando a la izquierda) y marca el punto verde de inicio. El botón "Ver" lo repite. Si la niña empieza lejos del punto, se le indica una vez sin penalizar. Los trazos están en `js/strokes.js`, en coordenadas relativas a la caja de cada letra.
+- `fichas.html` genera hojas A4 imprimibles por letra con pauta de 5 mm, el mismo punto de inicio y una propuesta para hacer juntos. La escritura con lápiz en papel complementa la pantalla; la instrucción solo motora en pantalla apenas transfiere (Santangelo y Graham 2016).
 
 ## Corrección del trazo
 
@@ -136,6 +147,8 @@ js/confetti.js        celebración
 js/twotap.js          doble toque con voz en los botones de acción
 js/activities.js      las actividades y la secuencia de cada lección
 js/app.js             navegación, lección, resumen, álbum y ajustes
+js/strokes.js         orden y dirección de trazo de cada letra
+fichas.html           fichas imprimibles A4 con pauta
 sw.js, manifest.webmanifest, icon.svg   instalación como app y uso sin conexión
 tools/build-single.py genera dist/bosque-de-letras.html (un solo archivo)
 ```
@@ -154,4 +167,4 @@ tools/build-single.py genera dist/bosque-de-letras.html (un solo archivo)
 
 ## Base pedagógica
 
-El diseño sigue un informe de investigación propio (carpeta `reports/`, no incluida en el repositorio) que revisa la evidencia sobre método fonético frente a silábico y global en español, conciencia fonológica, grafomotricidad y trazado en pantalla, feedback y recompensas, dosis y tiempo de pantalla, reconocimiento de voz infantil y apps existentes (Letrilandia, Micho, Ludiletras, Leo con Grin, GraphoGame, Lalilo, Khan Kids, Duolingo ABC). Pendientes de mayor esfuerzo: audios grabados de fonemas, animación del orden de trazo, frases y mini-cuentos decodificables, fichas imprimibles y sílabas inversas y trabadas.
+El diseño sigue un informe de investigación propio (carpeta `reports/`, no incluida en el repositorio) que revisa la evidencia sobre método fonético frente a silábico y global en español, conciencia fonológica, grafomotricidad y trazado en pantalla, feedback y recompensas, dosis y tiempo de pantalla, reconocimiento de voz infantil y apps existentes (Letrilandia, Micho, Ludiletras, Leo con Grin, GraphoGame, Lalilo, Khan Kids, Duolingo ABC). Pendiente: audios grabados de fonemas (ver "Sonido de las letras") y audio por región (seseo, yeísmo).

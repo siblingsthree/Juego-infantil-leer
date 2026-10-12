@@ -267,8 +267,14 @@ const App = (() => {
           <option value="letras">Ya conoce las vocales: empezar por las letras</option>
           <option value="silabas">Ya conoce las letras: empezar por las sílabas</option>
           <option value="palabras">Ya lee sílabas: empezar por las palabras</option>
+          <option value="silabas2">Ya lee palabras: empezar por sílabas inversas y trabadas</option>
+          <option value="frases">Empezar por las frases</option>
         </select>
         <small>Marca como hechas las lecciones anteriores, para que un niño de 6 o 7 años no tenga que recorrerlo todo.</small>
+      </div>
+      <div class="field">
+        <label>Fichas para imprimir</label>
+        <small>Hojas A4 con pauta de 5 mm, mismo punto de inicio que el juego: <a href="fichas.html" target="_blank" rel="noopener">abrir fichas.html</a> (funciona en la versión web, no en el enlace de Claude).</small>
       </div>
       <div class="field">
         <label>Informe para la familia</label>

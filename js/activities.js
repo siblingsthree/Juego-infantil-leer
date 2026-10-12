@@ -245,6 +245,7 @@ A.trace = (text, { guide = true, spoken = null } = {}) => async (root, api) => {
     ${promptHTML(guide ? `Sigue los puntos: <b class="font-letters">${U.esc(fmtText(text))}</b>` : `Escribe tú: <b>${U.esc(speakText)}</b>`)}
     <div class="trace-wrap"><canvas id="tc" aria-label="Zona para escribir"></canvas></div>
     <div class="actions trace-actions">
+      ${text.length === 1 && STROKES.get(fmtText(text)) ? '<button class="btn ghost" id="demo" data-say="Ver cómo se hace"><span class="ico">👀</span>Ver</button>' : ''}
       <button class="btn ghost" id="clear" data-say="Borrar todo"><span class="ico">🧽</span>Borrar</button>
       ${guide ? '' : '<button class="btn ghost" id="hint" data-say="Pista: ver la letra"><span class="ico">💡</span>Pista</button>'}
       <button class="btn good big" id="done" disabled data-say="Listo: comprobar"><span class="ico">✅</span>Listo</button>
@@ -254,6 +255,13 @@ A.trace = (text, { guide = true, spoken = null } = {}) => async (root, api) => {
   const doneBtn = root.querySelector('#done');
   const tracer = new Tracer(root.querySelector('#tc'), { text: fmtText(text), guide, onInk: () => { doneBtn.disabled = false; } });
   root.querySelector('#clear').onclick = () => { api.sfx('tap'); tracer.clear(); doneBtn.disabled = true; };
+  const demoBtn = root.querySelector('#demo');
+  if (demoBtn) {
+    demoBtn.onclick = async () => { api.sfx('tap'); api.say('Mira cómo se hace. Empieza en el punto verde.'); await tracer.playDemo(); };
+    // Con guía, la animación se muestra sola la primera vez (modelo en movimiento: Wright y Wright 1980).
+    if (guide) { await U.wait(900); if (api.alive()) { api.say(`Mira cómo se hace la ${speakText}. Empieza en el punto verde.`); await tracer.playDemo(); } }
+  }
+  let startHinted = false;
   const hintBtn = root.querySelector('#hint');
   if (hintBtn) hintBtn.onclick = () => { api.sfx('tap'); tracer.showHint(3000); };
   let attempts = 0, skip = null;
@@ -269,6 +277,12 @@ A.trace = (text, { guide = true, spoken = null } = {}) => async (root, api) => {
         api.sfx('ok');
         await api.praise(attempts ? U.pick(DATA.PRAISES_RETRY) : `Has seguido la forma de la ${speakText}.`);
         return { hits: attempts === 0 ? 1 : 0, total: 1 };
+      }
+      if (!res.ok && !startHinted && !tracer.startedAtStart()) {
+        startHinted = true;
+        api.say('Empieza en el punto verde y sigue la flecha del lápiz.');
+        tracer.showHint(4000); tracer.playDemo();
+        continue;
       }
       if (res.mirrored) {
         // Letra en espejo: normal hasta los 7 años. Se muestra el modelo con su punto de inicio y no cuenta como intento.
@@ -340,6 +354,50 @@ function buildSteps(lesson) {
     ];
   }
   if (lesson.type === 'game') return buildGameSteps(lesson);
+  if (lesson.type === 'units') {
+    const us = U.shuffle(lesson.units);
+    return [
+      { name: 'Escucha y toca', run: A.pickSyllable(lesson.units, lesson.units, 4) },
+      { name: 'Forma', run: A.buildUnit(us[0]) },
+      { name: 'Forma', run: A.buildUnit(us[1]) },
+      { name: 'Dilo tú', run: A.sayUnit(us[2]) },
+      { name: 'Traza', run: A.trace(us[3], { guide: true }) },
+      { name: 'Arma', run: A.buildWord(U.pick(lesson.words), lesson.words) },
+      { name: 'Escribe', run: A.trace(us[4] || us[0], { guide: false }) },
+    ];
+  }
+  if (lesson.type === 'closed') {
+    const ws = U.shuffle(lesson.words);
+    const w = i => ws[i % ws.length];
+    return [
+      { name: 'Lee', run: A.readWord(w(0), lesson.words) },
+      { name: 'Dictado', run: A.dictation(w(1)) },
+      { name: '¿Cuál es?', run: A.pickWord(w(2), lesson.words) },
+      { name: 'Arma', run: A.buildWord(w(3), lesson.words) },
+      { name: 'Lee en voz alta', run: A.sayWord(w(0)) },
+      { name: 'Traza', run: A.trace(w(4).w, { guide: true }) },
+      { name: 'Dictado', run: A.dictation(w(5)) },
+    ];
+  }
+  if (lesson.type === 'sentences') {
+    const ss = U.shuffle(lesson.sentences);
+    const sn = i => ss[i % ss.length];
+    return [
+      { name: 'Lee la frase', run: A.readSentence(sn(0), lesson.sentences) },
+      { name: 'Ordena', run: A.orderSentence(sn(1)) },
+      { name: 'Lee la frase', run: A.readSentence(sn(2), lesson.sentences) },
+      { name: 'Lee en voz alta', run: A.saySentence(sn(0)) },
+      { name: 'Ordena', run: A.orderSentence(sn(3)) },
+      { name: 'Lee la frase', run: A.readSentence(sn(4), lesson.sentences) },
+    ];
+  }
+  if (lesson.type === 'story') {
+    return [
+      { name: 'Cuento', run: A.story(lesson.story) },
+      { name: 'Ordena', run: A.orderSentence(U.pick(lesson.story.lines)) },
+      { name: 'Lee en voz alta', run: A.saySentence(lesson.story.lines[0]) },
+    ];
+  }
   if (lesson.type === 'words') {
     const ws = U.shuffle(lesson.words).slice(0, 6);
     const w = i => ws[i % ws.length];
@@ -769,3 +827,197 @@ function buildGameSteps(lesson) {
   }
   return [];
 }
+
+/* ====================== Sílabas 2, frases y cuentos ====================== */
+
+/* 15. Forma la unidad (sílaba inversa o trabada) tocando sus letras en orden. */
+A.buildUnit = (unit) => async (root, api) => {
+  const letters = [...unit];
+  const extra = U.shuffle([...DATA.VOWELS, 'm', 'p', 's', 'l', 't', 'n', 'r', 'b'].filter(l => !letters.includes(l))).slice(0, 2);
+  const tiles = U.shuffle([...letters, ...extra]);
+  const spoken = `Forma: ${unit}. ${letters.map(letterName).join(', ')}.`;
+  root.innerHTML = `
+    ${promptHTML('Forma la sílaba que oyes, letra a letra')}
+    <div class="slots letters font-letters" id="slots">${letters.map(() => '<span class="slot small"></span>').join('')}</div>
+    <div class="tiles" id="tiles">${tiles.map((l, i) => `<button class="tile small font-letters ${DATA.VOWELS.includes(l) ? 'vow' : 'cons'}" data-v="${l}" data-i="${i}">${U.esc(fmtText(l))}</button>`).join('')}</div>`;
+  root.querySelector('#sp').onclick = () => api.say(spoken);
+  api.say(spoken);
+  const slots = [...root.querySelectorAll('.slot')];
+  let pos = 0, first = true, done = false;
+  const ok = await new Promise(resolve => {
+    root.querySelectorAll('.tile').forEach(t => t.onclick = async () => {
+      if (done || t.disabled) return;
+      if (t.dataset.v === letters[pos]) {
+        api.sfx('pop'); t.disabled = true; t.classList.add('used');
+        slots[pos].textContent = fmtText(t.dataset.v); slots[pos].classList.add('filled'); pos++;
+        if (pos === letters.length) {
+          done = true; slots.forEach(s => s.classList.add('correct')); api.sfx('ok');
+          await api.praise(`${unit}. Has puesto ${letters.map(letterName).join(', ')}, en orden.`);
+          resolve(first);
+        } else api.say(letterName(t.dataset.v));
+      } else {
+        first = false; api.sfx('no'); api.miss(unit);
+        t.classList.add('wrong'); setTimeout(() => t.classList.remove('wrong'), 700);
+        api.say(`Escucha: ${unit}. Ahora toca la ${letterName(letters[pos])}.`);
+      }
+    });
+  });
+  return { hits: ok ? 1 : 0, total: 1 };
+};
+
+/* 16. Dilo tú con una unidad de dos o tres letras. */
+A.sayUnit = (unit) => {
+  const letters = [...unit];
+  const names = letters.map(letterName);
+  return speakActivity({
+    kind: 'syllable', target: unit,
+    display: `<div class="equation font-letters">
+        ${letters.map((l, i) => `<span class="eq-letter ${DATA.VOWELS.includes(l) ? 'vow' : 'cons'}">${U.esc(fmtText(l))}</span>${i < letters.length - 1 ? '<span class="eq-op">+</span>' : ''}`).join('')}
+        <span class="eq-op">=</span><button class="eq-result" data-say="${U.esc(unit)}" aria-label="Oír ${U.esc(unit)}">?</button>
+      </div>`,
+    promptText: `¿${names.slice(0, -1).map(n => `la <b>${U.esc(n)}</b>`).join(', ')} con la <b>${U.esc(names[names.length - 1])}</b>? Dilo en voz alta`,
+    promptSpoken: `¿${names.slice(0, -1).map(n => 'la ' + n).join(', ')} con la ${names[names.length - 1]}? ¿Qué dice? Toca el micrófono y dilo.`,
+    modelSpoken: unit,
+  });
+};
+
+/* 17. Lee la frase y toca la escena. Cada palabra se puede tocar para oírla (cuenta como ayuda). */
+A.readSentence = (sentence, pool) => async (root, api) => {
+  const others = U.shuffle(pool.filter(x => x.t !== sentence.t && x.e[0] !== sentence.e[0] && x.e.slice(-2) !== sentence.e.slice(-2))).slice(0, 2);
+  const options = U.shuffle([sentence, ...others]);
+  root.innerHTML = `
+    ${promptHTML('Lee la frase y toca su dibujo')}
+    <div class="sentence font-letters" id="sentence">${sentence.words.map((w, i) => `<button class="sword" data-i="${i}">${U.esc(fmtText(w))}</button>`).join(' ')}<span class="dot">.</span></div>
+    <div class="cards scenes" id="cards">${options.map(o => `<button class="card scene" data-v="${U.esc(o.t)}" aria-label="${U.esc(o.t)}">${o.e}</button>`).join('')}</div>`;
+  root.querySelector('#sp').onclick = () => api.say('Lee la frase y toca su dibujo.');
+  api.say('Lee la frase. Si una palabra cuesta, tócala para oírla. Luego toca el dibujo.');
+  let first = true, done = false;
+  root.querySelectorAll('.sword').forEach(b => b.onclick = () => { api.sfx('tap'); api.say(sentence.words[+b.dataset.i]); });
+  const ok = await new Promise(resolve => {
+    root.querySelectorAll('.card').forEach(card => card.onclick = async () => {
+      if (done) return;
+      if (card.dataset.v === sentence.t) {
+        done = true; card.classList.add('correct'); api.sfx('ok');
+        await api.praise(`Has leído: ${sentence.t}`);
+        resolve(first);
+      } else {
+        first = false; api.sfx('no');
+        card.classList.add('wrong', 'dim'); setTimeout(() => card.classList.remove('wrong'), 700);
+        api.say(`Escucha la frase: ${sentence.t} Busca ese dibujo.`);
+      }
+    });
+  });
+  return { hits: ok ? 1 : 0, total: 1 };
+};
+
+/* 18. Ordena la frase: se oye y se ve la escena; se tocan las palabras en orden. */
+A.orderSentence = (sentence) => async (root, api) => {
+  const tiles = U.shuffle(sentence.words.map((w, i) => ({ w, i })));
+  const spoken = `Escucha: ${sentence.t} Ordena las palabras.`;
+  root.innerHTML = `
+    ${promptHTML('Ordena las palabras de la frase')}
+    <button class="word-target" id="pic" aria-label="${U.esc(sentence.t)}"><span class="emoji">${sentence.e}</span></button>
+    <div class="slots words font-letters" id="slots">${sentence.words.map(() => '<span class="slot word"></span>').join('')}</div>
+    <div class="tiles" id="tiles">${tiles.map(t => `<button class="tile word font-letters" data-i="${t.i}">${U.esc(fmtText(t.w))}</button>`).join('')}</div>`;
+  root.querySelector('#sp').onclick = () => api.say(spoken);
+  root.querySelector('#pic').onclick = () => { api.sfx('tap'); api.say(sentence.t); };
+  api.say(spoken);
+  const slots = [...root.querySelectorAll('.slot')];
+  let pos = 0, first = true, done = false;
+  const ok = await new Promise(resolve => {
+    root.querySelectorAll('.tile').forEach(t => t.onclick = async () => {
+      if (done || t.disabled) return;
+      const i = +t.dataset.i;
+      if (i === pos) {
+        api.sfx('pop'); t.disabled = true; t.classList.add('used');
+        slots[pos].textContent = fmtText(sentence.words[i]); slots[pos].classList.add('filled'); pos++;
+        if (pos === sentence.words.length) {
+          done = true; slots.forEach(s => s.classList.add('correct')); api.sfx('ok');
+          await api.say(sentence.t);
+          await api.praise('Has ordenado la frase entera.');
+          resolve(first);
+        } else api.say(sentence.words[i]);
+      } else {
+        first = false; api.sfx('no');
+        t.classList.add('wrong'); setTimeout(() => t.classList.remove('wrong'), 700);
+        api.say(`Escucha otra vez: ${sentence.t} ¿Qué palabra va ahora?`);
+      }
+    });
+  });
+  return { hits: ok ? 1 : 0, total: 1 };
+};
+
+/* 19. Lee la frase en voz alta (micrófono). */
+A.saySentence = (sentence) => speakActivity({
+  kind: 'sentence', target: sentence.t,
+  display: `<div class="say-word"><span class="emoji">${sentence.e}</span><button class="read-word sentence-read font-letters" data-say="${U.esc(sentence.t)}">${U.esc(fmtText(sentence.t))}</button></div>`,
+  promptText: 'Lee la frase en voz alta',
+  promptSpoken: 'Lee la frase en voz alta. Toca el micrófono y léela.',
+  modelSpoken: sentence.t,
+});
+
+/* 20. Mini-cuento: cada frase con su escena, lectura con resaltado palabra a palabra, y una pregunta. */
+A.story = (story) => async (root, api) => {
+  let line = 0;
+  const renderLine = () => {
+    const l = story.lines[line];
+    root.innerHTML = `
+      ${promptHTML(`<b>${U.esc(story.title)}</b> · ${line + 1} de ${story.lines.length}`)}
+      <div class="story">
+        <div class="scene-big"><span class="emoji">${l.e}</span></div>
+        <div class="sentence font-letters" id="sentence">${l.words.map((w, i) => `<button class="sword" data-i="${i}">${U.esc(fmtText(w))}</button>`).join(' ')}<span class="dot">.</span></div>
+        <div class="actions">
+          <button class="btn ghost" id="read" data-say="Oír la frase"><span class="ico">🔈</span>Oír</button>
+          <button class="btn primary big" id="next" data-say="${line < story.lines.length - 1 ? 'Pasar página' : 'La pregunta'}"><span class="ico">${line < story.lines.length - 1 ? '📖' : '❓'}</span>${line < story.lines.length - 1 ? 'Pasar página' : 'Pregunta'}</button>
+        </div>
+      </div>`;
+    const words = [...root.querySelectorAll('.sword')];
+    words.forEach(b => b.onclick = () => { api.sfx('tap'); api.say(l.words[+b.dataset.i]); });
+    // Lectura con resaltado: por tiempo proporcional a la longitud de cada palabra (los eventos de
+    // límite de palabra de la voz no son fiables en móvil).
+    const readAloud = async () => {
+      const total = l.words.reduce((a, w) => a + w.length + 1, 0);
+      const est = 350 + total * 95 / Settings.get().rate;
+      api.say(l.t);
+      let t = 0;
+      for (let i = 0; i < words.length; i++) {
+        const dur = (l.words[i].length + 1) / total * est;
+        setTimeout(() => { words.forEach(w => w.classList.remove('lit')); words[i].classList.add('lit'); }, t);
+        t += dur;
+      }
+      setTimeout(() => words.forEach(w => w.classList.remove('lit')), t + 300);
+    };
+    root.querySelector('#sp').onclick = readAloud;
+    root.querySelector('#read').onclick = readAloud;
+    api.say(line === 0 ? `${story.title}. Lee la frase. Si quieres, toca "oír" para escucharla.` : 'Lee la frase.');
+  };
+  for (line = 0; line < story.lines.length; line++) {
+    if (!api.alive()) return { hits: 0, total: 1 };
+    renderLine();
+    await api.waitClick(root.querySelector('#next'));
+  }
+  // Pregunta de comprensión
+  const q = story.q;
+  const options = U.shuffle(q.options);
+  root.innerHTML = `
+    ${promptHTML(U.esc(q.t))}
+    <div class="cards" id="cards">${options.map(o => `<button class="card emoji-card" data-v="${o}">${o}</button>`).join('')}</div>`;
+  root.querySelector('#sp').onclick = () => api.say(q.t);
+  api.say(q.t);
+  let first = true, done = false;
+  const ok = await new Promise(resolve => {
+    root.querySelectorAll('.card').forEach(card => card.onclick = async () => {
+      if (done) return;
+      if (card.dataset.v === q.ok) {
+        done = true; card.classList.add('correct'); api.sfx('ok');
+        await api.praise('Has entendido el cuento.');
+        resolve(first);
+      } else {
+        first = false; api.sfx('no');
+        card.classList.add('wrong', 'dim'); setTimeout(() => card.classList.remove('wrong'), 700);
+        api.say(`Piensa en el cuento: ${story.lines.map(x => x.t).join(' ')} ${q.t}`);
+      }
+    });
+  });
+  return { hits: ok ? 1 : 0, total: 1 };
+};

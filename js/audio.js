@@ -160,6 +160,11 @@ const Listen = (() => {
       const words = String(a).toLowerCase().split(/\s+/).map(canon).filter(Boolean);
       const whole = canon(a);
       if (kind === 'syllable') return whole === t || words.some(w => w === t || w.startsWith(t)) || whole.startsWith(t);
+      if (kind === 'sentence') {
+        const need = String(target).toLowerCase().replace(/[.,¿?¡!]/g, '').split(/\s+/).map(canon).filter(w => w.length > 2);
+        const got = need.filter(w => words.some(x => x === w || (w.length >= 4 && distance(x, w) <= 1)));
+        return need.length ? got.length >= Math.ceil(need.length / 2) : false;
+      }
       // Palabras: exacta, o con un solo error que no sea la primera letra (cambiar "pato" por "gato" sí es fallo).
       return whole === t || words.includes(t) || (t.length >= 5 && words.some(w => w[0] === t[0] && distance(w, t) <= 1));
     });

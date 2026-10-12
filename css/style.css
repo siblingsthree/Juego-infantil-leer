@@ -105,6 +105,8 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 4px s
 .world-good { border-color: var(--good); background: color-mix(in srgb, var(--good) 16%, var(--surface)); }
 .world-star { border-color: var(--purple); background: color-mix(in srgb, var(--purple) 16%, var(--surface)); }
 .world-pink { border-color: var(--pink); background: color-mix(in srgb, var(--pink) 16%, var(--surface)); }
+.world-teal { border-color: var(--teal); background: color-mix(in srgb, var(--teal) 16%, var(--surface)); }
+.world-purple { border-color: var(--purple); background: color-mix(in srgb, var(--purple) 16%, var(--surface)); }
 .world-emoji { filter: drop-shadow(0 3px 0 rgba(0, 0, 0, .12)); }
 .home-foot { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
 
@@ -280,3 +282,17 @@ button.word-target, .big-emoji { background: none; border: none; padding: 0; box
 .report ul { margin: 0; padding-left: 20px; }
 .report li { margin: 4px 0; }
 .report p { margin: 8px 0 4px; }
+
+/* ---- Frases y cuentos ---- */
+.sentence { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 6px 10px; font-size: clamp(1.7rem, 6vw, 3rem); color: var(--ink); background: var(--surface); border: 4px solid var(--purple); border-radius: var(--radius); padding: 12px 16px; box-shadow: var(--shadow); }
+.sword { background: none; border: none; padding: 2px 6px; border-radius: 10px; font: inherit; color: inherit; }
+.sword:active { background: color-mix(in srgb, var(--star) 40%, var(--surface)); }
+.sword.lit { background: color-mix(in srgb, var(--star) 55%, var(--surface)); }
+.sentence .dot { color: var(--muted); }
+.cards.scenes .card { font-size: clamp(2.2rem, 9vw, 4.2rem); letter-spacing: 6px; }
+.slots.words { flex-wrap: wrap; gap: 8px; }
+.slot.word { min-width: 90px; height: 64px; padding: 0 12px; font-size: 1.7rem; }
+.tile.word { font-size: 1.6rem; min-height: 64px; }
+.story { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.scene-big .emoji { font-size: clamp(4rem, 20vmin, 7.5rem); line-height: 1; letter-spacing: 10px; }
+.sentence-read { font-size: clamp(1.5rem, 5.5vw, 2.6rem); }

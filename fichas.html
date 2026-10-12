@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fichas para imprimir · Bosque de Letras</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Nunito:wght@700;900&display=swap">
+<style>
+  /* Fichas de trazado: misma fuente y mismo punto de inicio que el juego, pauta Montessori de 5 mm. */
+  :root { --ink: #2B2E6B; --guide: #c9c9c9; --line: #8fbce6; --mid: #e07a7a; --good: #27C26B; }
+  body { margin: 0; font-family: 'Nunito', sans-serif; color: var(--ink); background: #f4f6fb; }
+  .toolbar { position: sticky; top: 0; background: #fff; border-bottom: 2px solid #dde; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .toolbar label { font-weight: 900; }
+  .toolbar select, .toolbar button { font: inherit; font-weight: 900; padding: 8px 14px; border-radius: 10px; border: 2px solid #bcd; background: #fff; }
+  .toolbar button.primary { background: #FF6B35; color: #fff; border-color: #FF6B35; }
+  .sheet { background: #fff; width: 210mm; min-height: 297mm; margin: 12px auto; padding: 14mm 16mm; box-sizing: border-box; box-shadow: 0 2px 12px rgba(0,0,0,.08); page-break-after: always; }
+  .head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #dde; margin-bottom: 8mm; }
+  .head h1 { font-size: 20pt; margin: 0; }
+  .head small { color: #667; }
+  .model { display: flex; align-items: center; gap: 10mm; margin-bottom: 6mm; }
+  .model .big { font-family: 'Andika', sans-serif; font-weight: 700; font-size: 64pt; line-height: 1; color: var(--ink); position: relative; }
+  .model .ex { font-size: 16pt; }
+  .model .ex .emoji { font-size: 34pt; display: block; }
+  .row { position: relative; height: 25mm; margin-bottom: 5mm; }
+  .row .lines { position: absolute; inset: 0; }
+  .row .lines i { position: absolute; left: 0; right: 0; border-top: 0.4mm solid var(--line); }
+  .row .lines i.mid { border-top: 0.4mm dashed var(--mid); }
+  .row .letters { position: absolute; left: 4mm; right: 0; top: 0; height: 25mm; display: flex; gap: 9mm; align-items: flex-end; }
+  .row .letters span { font-family: 'Andika', sans-serif; font-weight: 700; font-size: 44pt; line-height: 1; color: var(--guide); -webkit-text-stroke: 0.3mm #888; position: relative; }
+  .row .letters span::before { content: ''; position: absolute; width: 2.2mm; height: 2.2mm; border-radius: 50%; background: var(--good); top: var(--dy, 2mm); left: var(--dx, 1mm); }
+  .row.free .letters span { opacity: 0; }
+  .tip { font-size: 10pt; color: #556; margin-top: 4mm; }
+  .foot { margin-top: 8mm; font-size: 9pt; color: #778; }
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none; }
+    .sheet { box-shadow: none; margin: 0; width: auto; min-height: auto; }
+  }
+  @page { size: A4; margin: 0; }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <label for="which">Fichas:</label>
+  <select id="which">
+    <option value="vocales">Vocales (A E I O U)</option>
+    <option value="letras1">Consonantes 1 (M P S L T N D)</option>
+    <option value="letras2">Consonantes 2 (F R B C G V Z Ñ J Y H)</option>
+    <option value="todas">Todas las letras</option>
+  </select>
+  <label for="case">Letra:</label>
+  <select id="case"><option value="upper">Mayúscula</option><option value="lower">Minúscula</option><option value="both">Ambas</option></select>
+  <button class="primary" id="print">🖨️ Imprimir</button>
+  <span>Una hoja A4 por letra. Pauta de 5 mm.</span>
+</div>
+<div id="sheets"></div>
+<script src="js/data.js"></script>
+<script>
+(function () {
+  const groups = {
+    vocales: DATA.VOWELS,
+    letras1: ['m', 'p', 's', 'l', 't', 'n', 'd'],
+    letras2: ['f', 'r', 'b', 'c', 'g', 'v', 'z', 'ñ', 'j', 'y', 'h'],
+    todas: [...DATA.VOWELS, ...DATA.CONSONANTS.filter(c => c.length === 1)],
+  };
+  const round = 'acdegoqCGOQ';
+  function row(ch, free) {
+    const dx = round.includes(ch) ? '70%' : '6%';
+    return `<div class="row ${free ? 'free' : ''}">
+      <div class="lines"><i style="top:0"></i><i class="mid" style="top:8.5mm"></i><i style="top:17mm"></i><i style="top:25mm"></i></div>
+      <div class="letters">${Array.from({ length: 7 }, () => `<span style="--dx:${dx}">${ch}</span>`).join('')}</div>
+    </div>`;
+  }
+  function sheet(letter, form) {
+    const info = DATA.LETTERS[letter];
+    const ch = form === 'upper' ? letter.toUpperCase() : letter;
+    return `<section class="sheet">
+      <div class="head"><h1>Bosque de Letras · Ficha de la ${info.name}</h1><small>Nombre: ____________________</small></div>
+      <div class="model">
+        <div class="big">${letter.toUpperCase()} ${letter}</div>
+        <div class="ex"><span class="emoji">${info.emoji}</span>${info.word}</div>
+        <div class="ex">Empieza en el punto verde. ${round.includes(ch) ? 'Las letras redondas empiezan arriba a la derecha y giran hacia la izquierda.' : 'Las letras de palo empiezan arriba a la izquierda.'}</div>
+      </div>
+      ${row(ch, false)}${row(ch, false)}${row(ch, false)}${row(ch, true)}${row(ch, true)}
+      <p class="tip">Repasa las letras grises con lápiz. En las dos últimas filas, escríbela tú. Después, decid juntos tres palabras que empiecen por "${info.silent ? 'hache (es muda)' : info.name}".</p>
+      <p class="foot">Trazar con el dedo en la pantalla y escribir con lápiz en papel se complementan; la instrucción solo en pantalla no basta para la escritura.</p>
+    </section>`;
+  }
+  function render() {
+    const letters = groups[document.getElementById('which').value];
+    const form = document.getElementById('case').value;
+    const forms = form === 'both' ? ['upper', 'lower'] : [form];
+    document.getElementById('sheets').innerHTML = letters.flatMap(l => forms.map(f => sheet(l, f))).join('');
+  }
+  document.getElementById('which').onchange = render;
+  document.getElementById('case').onchange = render;
+  document.getElementById('print').onclick = () => window.print();
+  render();
+})();
+</script>
+</body>
+</html>

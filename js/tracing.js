@@ -96,7 +96,75 @@ class Tracer {
       }
     }
     this.tolData = t.getImageData(0, 0, this.w, this.h).data;
-    this.start = this.startPoint(md);
+    // Caja del contorno de la letra, para encajar los trazos autorizados.
+    let x0 = this.w, y0 = this.h, x1 = 0, y1 = 0;
+    for (const i of this.letterPixels) { const y = Math.floor(i / this.w), x = i % this.w; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    this.bbox = { x: x0, y: y0, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) };
+    const authored = this.text.length === 1 && typeof STROKES !== 'undefined' ? STROKES.get(this.text) : null;
+    this.demoStrokes = authored ? authored.map(st => st.map(p => ({ x: this.bbox.x + p.x * this.bbox.w, y: this.bbox.y + p.y * this.bbox.h }))) : null;
+    this.start = this.demoStrokes ? this.demoStrokes[0][0] : this.startPoint(md);
+    this.demoProgress = null;
+  }
+
+  /* Animación: un lápiz recorre los trazos en orden, dejando estela. Devuelve una promesa. */
+  playDemo() {
+    if (!this.demoStrokes) return Promise.resolve();
+    if (this._demoCancel) this._demoCancel();
+    return new Promise(resolve => {
+      const speed = this.fs * 0.9; // píxeles por segundo
+      const total = this.demoStrokes.reduce((a, st) => a + STROKES.length(st.map(p => ({ x: p.x, y: p.y }))), 0);
+      const pause = 0.35; // segundos entre trazos
+      const duration = total / speed + pause * (this.demoStrokes.length - 1) + 0.4;
+      const t0 = performance.now();
+      let raf = 0, stopped = false;
+      this._demoCancel = () => { stopped = true; cancelAnimationFrame(raf); this.demoProgress = null; this.render(); resolve(); };
+      const tick = () => {
+        if (stopped) return;
+        const t = (performance.now() - t0) / 1000;
+        this.demoProgress = t;
+        this.render();
+        if (t < duration) raf = requestAnimationFrame(tick);
+        else { this.demoProgress = null; this._demoCancel = null; this.render(); resolve(); }
+      };
+      raf = requestAnimationFrame(tick);
+    });
+  }
+
+  /* Dibuja la estela y el lápiz según el tiempo transcurrido. */
+  drawDemo(c) {
+    const speed = this.fs * 0.9, pause = 0.35;
+    let t = this.demoProgress;
+    c.save();
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    c.strokeStyle = this.cssVar('--accent', '#ff6b35'); c.lineWidth = Math.max(6, this.fs * 0.08);
+    let pen = null;
+    for (const st of this.demoStrokes) {
+      const len = STROKES.length(st);
+      const dur = len / speed;
+      const frac = Math.max(0, Math.min(1, t / dur));
+      // dibuja la parte recorrida
+      let acc = 0; const target = frac * len;
+      c.beginPath(); c.moveTo(st[0].x, st[0].y);
+      for (let i = 1; i < st.length; i++) {
+        const seg = Math.hypot(st[i].x - st[i - 1].x, st[i].y - st[i - 1].y);
+        if (acc + seg >= target) {
+          const k = seg ? (target - acc) / seg : 0;
+          pen = { x: st[i - 1].x + (st[i].x - st[i - 1].x) * k, y: st[i - 1].y + (st[i].y - st[i - 1].y) * k };
+          c.lineTo(pen.x, pen.y); break;
+        }
+        acc += seg; c.lineTo(st[i].x, st[i].y);
+        if (i === st.length - 1) pen = st[i];
+      }
+      c.stroke();
+      if (t < dur) break;
+      t -= dur + pause;
+      if (t < 0) { break; }
+    }
+    if (pen) {
+      c.font = `${Math.max(24, this.fs * 0.3)}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'bottom';
+      c.fillText('✏️', pen.x + this.fs * 0.08, pen.y + this.fs * 0.02);
+    }
+    c.restore();
   }
 
   /* Punto de inicio orientativo: las letras redondas (a c d e g o q) empiezan por el trazo curvo,
@@ -187,6 +255,7 @@ class Tracer {
         c.lineWidth = 3; c.strokeStyle = '#fff'; c.stroke();
       }
     }
+    if (this.demoProgress != null && this.demoStrokes) this.drawDemo(c);
     // Tinta: el canvas de tinta es negro; se tiñe con el color del tema.
     c.save();
     c.globalCompositeOperation = 'source-over';
@@ -202,6 +271,11 @@ class Tracer {
   }
 
   clear() { this.strokes = []; this.current = null; this.redrawInk(); this.render(); }
+  startedAtStart() {
+    if (!this.start || !this.strokes.length) return true;
+    const p = this.strokes[0][0];
+    return Math.hypot(p.x - this.start.x, p.y - this.start.y) < this.fs * 0.3;
+  }
   showHint(ms = 2500) {
     this.hintUntil = Date.now() + ms; this.render();
     setTimeout(() => this.render(), ms + 20);
