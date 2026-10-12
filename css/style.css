@@ -196,7 +196,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 4px s
 .field.row { flex-direction: row; justify-content: space-between; align-items: center; gap: 12px; }
 .field label { font-weight: 700; }
 .field small { color: var(--muted); }
-.field select, .field input[type=range] { width: 100%; min-height: 44px; font: inherit; border-radius: 12px; border: 2px solid var(--border); background: var(--bg); color: var(--fg); padding: 6px 10px; }
+.field select, .field input[type=range], .field input[type=text] { width: 100%; min-height: 44px; font: inherit; border-radius: 12px; border: 2px solid var(--border); background: var(--bg); color: var(--fg); padding: 6px 10px; }
 .field input[type=checkbox] { width: 28px; height: 28px; accent-color: var(--accent); flex: none; }
 .gate { display: flex; gap: 10px; flex-wrap: wrap; }
 .gate .btn { flex: 1; }

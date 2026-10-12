@@ -34,7 +34,7 @@ const App = (() => {
       <section class="home">
         <div class="hero">
           <button class="mascot" id="mascot" aria-label="Lía la lechuza">${resting ? '😴' : MASCOT}</button>
-          <div class="bubble">${resting ? 'Lía descansa. Hoy ya hemos jugado. ¡Hasta mañana!' : '¡Hola! Soy <b>Lía</b>. ¿Qué quieres aprender hoy?'}</div>
+          <div class="bubble">${resting ? 'Lía descansa. Hoy ya hemos jugado. ¡Hasta mañana!' : `¡Hola${Settings.get().childName ? ', <b>' + U.esc(Settings.get().childName) + '</b>' : ''}! Soy <b>Lía</b>. ¿Qué quieres aprender hoy?`}</div>
         </div>
         <div class="worlds">
           ${DATA.WORLDS.map(w => `
@@ -51,7 +51,7 @@ const App = (() => {
           <span class="muted">${done} de ${total} lecciones</span>
         </div>
       </section>`;
-    screen.querySelector('#mascot').onclick = () => { Sfx.play('pop'); Voice.say('¡Hola! Soy Lía la lechuza. Toca un mundo para empezar a jugar.'); };
+    screen.querySelector('#mascot').onclick = () => { Sfx.play('pop'); Voice.say(`¡Hola${Settings.get().childName ? ', ' + Settings.get().childName : ''}! Soy Lía la lechuza. Toca un mundo para empezar a jugar.`); };
     screen.querySelectorAll('.world').forEach(b => b.onclick = () => {
       if (Session.isClosed()) { Sfx.play('no'); Voice.say('Hoy ya hemos jugado. Un adulto puede abrirlo en ajustes.'); b.classList.add('wrong'); setTimeout(() => b.classList.remove('wrong'), 600); return; }
       Sfx.play('tap'); world(b.dataset.w);
@@ -231,6 +231,10 @@ const App = (() => {
     openModal(`
       <h2>Ajustes</h2>
       <div class="field">
+        <label for="childName">Nombre de la niña o niño (para el saludo)</label>
+        <input type="text" id="childName" maxlength="20" value="${U.esc(s.childName || '')}" placeholder="India">
+      </div>
+      <div class="field">
         <label for="caseMode">Tipo de letra</label>
         <select id="caseMode">
           <option value="upper" ${s.caseMode === 'upper' ? 'selected' : ''}>Mayúsculas (A, MA, PATO)</option>
@@ -310,6 +314,7 @@ const App = (() => {
       </details>`);
     const q = sel => modal.querySelector(sel);
     q('#caseMode').onchange = e => Settings.set({ caseMode: e.target.value });
+    q('#childName').oninput = e => Settings.set({ childName: e.target.value.trim() });
     q('#voice').onchange = e => { Settings.set({ voiceURI: e.target.value }); Voice.refresh(); };
     q('#rate').oninput = e => { q('#rateOut').value = e.target.value; Settings.set({ rate: +e.target.value }); };
     q('#freeMode').onchange = e => Settings.set({ freeMode: e.target.checked });
