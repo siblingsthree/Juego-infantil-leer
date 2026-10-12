@@ -134,6 +134,10 @@ El progreso y los ajustes se guardan en el navegador del dispositivo (localStora
 2. Haz push a `master` (o `main`). El flujo `.github/workflows/pages.yml` publica la web.
 3. Abre la URL que aparece en el flujo. Desde el móvil, "Añadir a pantalla de inicio" la instala como app.
 
+## Versión
+
+El número de versión (`VERSION` en `js/data.js`) se muestra en pequeño abajo a la derecha de todas las pantallas y en los ajustes. Súbelo en cada cambio que publiques: es la forma de saber que el dispositivo no está mostrando una copia antigua.
+
 ## Estructura
 
 ```

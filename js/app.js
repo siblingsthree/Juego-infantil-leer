@@ -170,7 +170,8 @@ const App = (() => {
   /* ---------- Sesión: termina sola a los N minutos (EdTech Hub 2025; OMS/AAP/AEP) ---------- */
   const Session = (() => {
     let startedAt = 0, closed = false, lastLog = 0;
-    function start() { if (!startedAt) { startedAt = Date.now(); lastLog = startedAt; } }
+    function start() {
+    document.getElementById('version').textContent = 'v ' + DATA.VERSION; if (!startedAt) { startedAt = Date.now(); lastLog = startedAt; } }
     function minutes() { return startedAt ? Math.round((Date.now() - startedAt) / 60000) : 0; }
     function lessonDone() { const now = Date.now(); Progress.logSession(Math.max(1, Math.round((now - lastLog) / 60000))); lastLog = now; }
     function shouldClose() { const lim = Settings.get().sessionMinutes; return !closed && lim > 0 && startedAt && (Date.now() - startedAt) >= lim * 60000; }
