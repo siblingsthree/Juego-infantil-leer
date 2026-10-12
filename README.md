@@ -17,10 +17,10 @@ Sigue el **método silábico** habitual en Infantil: sonidos de las letras, lueg
 | Mundo | Qué aprende | Lecciones |
 |---|---|---|
 | 🌈 Las vocales | A, E, I, O, U | 5 |
-| 🧱 Las letras | consonantes en orden de dificultad: m, p, s, l, t, n, d, f, r, b, c, g, v, z, ñ, j, y, h; cada una con sus sílabas | 18 |
+| 🧱 Las letras | consonantes en orden de dificultad: m, p, s, l, t, n, d, f, r, b, c (ca/co/cu y ce/ci aparte), g (ga/go/gu y ge/gi aparte), v, z, ñ, j, y, h (muda), y las letras dobles qu, ch, ll | 23 |
 | 🧩 Las sílabas | mezclas de sílabas de varias letras | 9 |
-| 📖 Las palabras | palabras con dibujo, armadas por sílabas; de 2 a 4 sílabas | 7 |
-| 🎪 Los juegos | juegos sueltos, siempre abiertos, que usan las letras ya trabajadas | 7 |
+| 📖 Las palabras | palabras con dibujo, armadas por sílabas; de 2 a 4 sílabas; "Letras dobles" al final | 8 |
+| 🎪 Los juegos | juegos sueltos, siempre abiertos, que usan las letras ya trabajadas, más un repaso espaciado | 8 |
 
 Cada lección encadena actividades cortas y termina con estrellas y una pegatina para el álbum:
 
@@ -43,6 +43,8 @@ Cada lección encadena actividades cortas y termina con estrellas y una pegatina
 | ¿Cuál es? | Ve el dibujo y elige la palabra escrita entre tres | Lectura de palabras |
 | Dictado | Oye la palabra y la escribe letra a letra con fichas | Ortografía y segmentación en fonemas |
 
+| Repaso | Las letras completadas hace más tiempo vuelven a salir | Recuperación espaciada |
+
 El mundo 🎪 Los juegos usa las letras que ya tienen estrella (si aún no hay ninguna, m, p y s) y palabras del nivel alcanzado, así que crece con la niña. Varios de estos juegos también aparecen dentro de las lecciones de vocales, consonantes y palabras.
 
 Detalles que importan a esta edad (4 a 7 años, muchos aún no leen):
@@ -52,9 +54,25 @@ Detalles que importan a esta edad (4 a 7 años, muchos aún no leen):
 
 - Las letras se dibujan con la fuente **Andika**, pensada para lectores que empiezan: la "a" y la "g" tienen la forma que se enseña a escribir.
 - Por defecto todo va en **mayúsculas**, como en Infantil. En los ajustes se cambia a minúsculas o a ambas.
-- Nunca hay castigo: tras dos fallos se ilumina la respuesta, y tras dos trazos fallidos aparece "Siguiente".
+- Feedback que un niño de 5 años entiende: al primer fallo se atenúa la tarjeta tocada y se repite el sonido buscado; al segundo se ilumina la correcta y se le pide tocarla, para que la última acción sea siempre correcta. Sin aspa roja ni zumbido (dos notas suaves).
+- Elogio de proceso, no de persona ni inflado: "has escuchado muy bien", "has juntado la pe y la a", "lo has vuelto a intentar y ha salido". Nada de "eres una campeona" ni "fantástico" (Kamins y Dweck 1999; Brummelman 2014).
+- Las estrellas premian la práctica: una por cada vez que se completa la lección (hasta tres), no el acierto a la primera (Deci 1999). El confeti sale solo a veces.
+- Tras dos trazos fallidos aparece "Siguiente". Las letras en espejo (b por d, p por q) no cuentan como fallo: el juego las detecta, muestra el modelo con su punto verde de inicio y pide repetir.
 - Las lecciones se desbloquean en orden dentro de cada mundo. El "modo libre" de los ajustes abre todas.
 - La "z" solo forma za, zo, zu. La "h" se oye muda. La "c" y la "g" se pronuncian como corresponde ante e, i.
+
+## Sesiones cortas y familia
+
+- La sesión termina sola a los 10 minutos (ajustable de 5 a 20, o sin límite): al acabar la lección en curso Lía se despide, propone contarle a alguien lo aprendido y el inicio queda "en descanso" hasta que un adulto lo reabre en ajustes. Las sesiones cortas rinden más que las largas (EdTech Hub 2025) y la Asociación Española de Pediatría desaconseja pantallas antes de los 6 años.
+- Cada lección termina con una propuesta para hacer juntos sin pantalla (buscar cosas que empiecen por un sonido, escribir la letra en harina, palmadas con los nombres de casa, leer un cuento en papel). Los ensayos con apps de lectura solo muestran ganancias claras cuando hay un adulto implicado (McTigue 2020).
+- Si no pasa nada en 20 segundos, la instrucción se repite sola.
+- Informe para la familia en ajustes: lecciones completadas, días y minutos de la última semana, letras y sílabas que más cuestan, y dos ideas para practicar sin pantalla.
+- Punto de partida: un niño de 6 o 7 años puede empezar por las letras, las sílabas o las palabras sin recorrer las vocales.
+- Repaso espaciado: la lección "Repaso" del mundo de juegos vuelve a sacar las letras completadas hace más tiempo.
+
+## Sonido de las letras
+
+La voz sintetizada no sabe pronunciar un fonema aislado (/m/ sin vocal), así que el juego presenta cada consonante por su sonido en contexto ("suena como en mono: mo, ma, me...") y deja el nombre ("se llama eme") como dato secundario. Si grabas tus propios audios en `audio/sonidos/<letra>.mp3` (por ejemplo `m.mp3` con "mmm"), el juego los usa automáticamente al tocar la letra grande. Es la mejora de más valor pedagógico pendiente.
 
 ## Corrección del trazo
 
@@ -133,3 +151,7 @@ tools/build-single.py genera dist/bosque-de-letras.html (un solo archivo)
 ## Licencia
 
 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es): se puede copiar, compartir y adaptar con atribución, **sin uso comercial** y manteniendo la misma licencia. Ver `LICENSE`.
+
+## Base pedagógica
+
+El diseño sigue un informe de investigación propio (carpeta `reports/`, no incluida en el repositorio) que revisa la evidencia sobre método fonético frente a silábico y global en español, conciencia fonológica, grafomotricidad y trazado en pantalla, feedback y recompensas, dosis y tiempo de pantalla, reconocimiento de voz infantil y apps existentes (Letrilandia, Micho, Ludiletras, Leo con Grin, GraphoGame, Lalilo, Khan Kids, Duolingo ABC). Pendientes de mayor esfuerzo: audios grabados de fonemas, animación del orden de trazo, frases y mini-cuentos decodificables, fichas imprimibles y sílabas inversas y trabadas.

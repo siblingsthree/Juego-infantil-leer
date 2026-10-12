@@ -3,7 +3,7 @@
    en navegación privada o con datos bloqueados el juego sigue funcionando sin guardar. */
 const Settings = (() => {
   const KEY = 'bosque-letras:settings';
-  const DEFAULTS = { caseMode: 'upper', rate: 0.9, voiceURI: null, freeMode: false, soundFx: true, twoTap: true };
+  const DEFAULTS = { caseMode: 'upper', rate: 0.9, voiceURI: null, freeMode: false, soundFx: true, twoTap: true, sessionMinutes: 10 };
   let cache = null;
   function get() {
     if (cache) return cache;
@@ -25,18 +25,49 @@ const Progress = (() => {
   function load() {
     if (data) return data;
     try { data = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { data = null; }
-    if (!data || typeof data !== 'object') data = { lessons: {}, stickers: [] };
+    if (!data || typeof data !== 'object') data = { lessons: {}, stickers: [], misses: {}, sessions: [] };
     data.lessons = data.lessons || {};
     data.stickers = data.stickers || [];
+    data.misses = data.misses || {};
+    data.sessions = data.sessions || [];
     return data;
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(load())); } catch (e) { /* sin almacenamiento */ } }
   function stars(lessonId) { return (load().lessons[lessonId] || {}).stars || 0; }
-  function complete(lesson, stars) {
+  function complete(lesson) {
     const d = load();
     const prev = d.lessons[lesson.id] || { stars: 0, plays: 0 };
-    d.lessons[lesson.id] = { stars: Math.max(prev.stars, stars), plays: prev.plays + 1, last: Date.now() };
+    const plays = prev.plays + 1;
+    d.lessons[lesson.id] = { stars: Math.min(3, plays), plays, last: Date.now() };
     if (!d.stickers.includes(lesson.emoji)) d.stickers.push(lesson.emoji);
+    save();
+    return d.lessons[lesson.id];
+  }
+  /* Fallos por letra o sílaba, para el informe familiar. */
+  function miss(key) { const d = load(); d.misses[key] = (d.misses[key] || 0) + 1; save(); }
+  function hardest(n = 5) { return Object.entries(load().misses).sort((a, b) => b[1] - a[1]).slice(0, n); }
+  /* Sesiones: minutos jugados por día. */
+  function logSession(minutes) {
+    const d = load(); const day = new Date().toISOString().slice(0, 10);
+    const last = d.sessions[d.sessions.length - 1];
+    if (last && last.day === day) last.minutes += minutes; else d.sessions.push({ day, minutes });
+    if (d.sessions.length > 60) d.sessions.splice(0, d.sessions.length - 60);
+    save();
+  }
+  /* Repaso: lecciones completadas hace más tiempo (intervalos crecientes: 1, 3, 7 sesiones). */
+  function dueForReview(n = 3) {
+    const d = load();
+    return Object.entries(d.lessons).filter(([id]) => /^(v|c)-/.test(id))
+      .sort((a, b) => a[1].last - b[1].last).slice(0, n).map(([id]) => id);
+  }
+  /* Punto de partida: marca como completadas todas las lecciones anteriores a un mundo. */
+  function startFrom(worldId) {
+    const d = load();
+    for (const w of DATA.WORLDS) {
+      if (w.id === worldId) break;
+      if (w.free) continue;
+      for (const l of w.lessons) { if (!d.lessons[l.id]) d.lessons[l.id] = { stars: 1, plays: 1, last: Date.now() - 86400000 }; if (!d.stickers.includes(l.emoji)) d.stickers.push(l.emoji); }
+    }
     save();
   }
   function isUnlocked(world, idx) {
@@ -50,6 +81,6 @@ const Progress = (() => {
   }
   function knownLetters() { return [...DATA.VOWELS, ...knownConsonants()]; }
   function worldDone(world) { return world.lessons.filter(l => stars(l.id) > 0).length; }
-  function reset() { data = { lessons: {}, stickers: [] }; save(); }
-  return { load, stars, complete, isUnlocked, worldDone, reset, knownConsonants, knownLetters };
+  function reset() { data = { lessons: {}, stickers: [], misses: {}, sessions: [] }; save(); }
+  return { load, stars, complete, miss, hardest, logSession, dueForReview, startFrom, isUnlocked, worldDone, reset, knownConsonants, knownLetters };
 })();

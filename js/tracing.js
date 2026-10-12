@@ -96,6 +96,21 @@ class Tracer {
       }
     }
     this.tolData = t.getImageData(0, 0, this.w, this.h).data;
+    this.start = this.startPoint(md);
+  }
+
+  /* Punto de inicio orientativo: las letras redondas (a c d e g o q) empiezan por el trazo curvo,
+     arriba a la derecha del óvalo; las demás, arriba a la izquierda. Solo se marca en letras sueltas. */
+  startPoint(md) {
+    if (this.text.length !== 1) return null;
+    const round = 'acdegoqCGOQ'.includes(this.text);
+    let top = -1, xs = [];
+    for (let y = 0; y < this.h && top < 0; y++) for (let x = 0; x < this.w; x++) if (md[(y * this.w + x) * 4 + 3] > 60) { top = y; break; }
+    if (top < 0) return null;
+    const y = Math.min(this.h - 1, top + Math.round(this.fs * 0.04));
+    for (let x = 0; x < this.w; x++) if (md[(y * this.w + x) * 4 + 3] > 60) xs.push(x);
+    if (!xs.length) return null;
+    return { x: round ? xs[xs.length - 1] - this.fs * 0.04 : xs[0] + this.fs * 0.05, y: y + this.fs * 0.05 };
   }
 
   point(e) {
@@ -166,6 +181,11 @@ class Tracer {
       c.setLineDash([fs * 0.06, fs * 0.05]);
       c.strokeText(this.text, this.x, this.baseY);
       c.setLineDash([]);
+      if (this.start) {
+        c.beginPath(); c.arc(this.start.x, this.start.y, Math.max(7, fs * 0.05), 0, Math.PI * 2);
+        c.fillStyle = this.cssVar('--good', '#27c26b'); c.fill();
+        c.lineWidth = 3; c.strokeStyle = '#fff'; c.stroke();
+      }
     }
     // Tinta: el canvas de tinta es negro; se tiñe con el color del tema.
     c.save();
@@ -188,8 +208,16 @@ class Tracer {
   }
   hasInk() { return this.strokes.some(s => s.length > 2); }
 
-  evaluate() {
-    const d = this.ink.getContext('2d').getImageData(0, 0, this.w, this.h).data;
+  /* Puntúa la tinta (por defecto la real; con mirror=true, la tinta reflejada horizontalmente,
+     para detectar letras en espejo: normales hasta los 7 años, no se penalizan). */
+  evaluate(mirror = false) {
+    let src = this.ink;
+    if (mirror) {
+      src = document.createElement('canvas'); src.width = this.w; src.height = this.h;
+      const mc = src.getContext('2d'); mc.translate(this.w, 0); mc.scale(-1, 1); mc.drawImage(this.ink, 0, 0);
+      // Reflejar respecto al centro de la letra, no del lienzo: la letra está centrada en this.x.
+    }
+    const d = src.getContext('2d').getImageData(0, 0, this.w, this.h).data;
     let covered = 0;
     for (const i of this.letterPixels) if (d[i * 4 + 3] > 40) covered++;
     const coverage = this.letterPixels.length ? covered / this.letterPixels.length : 0;
@@ -203,6 +231,13 @@ class Tracer {
     const precision = inkCount ? inside / inkCount : 0;
     const covThr = this.guide ? 0.72 : 0.62;
     const precThr = this.guide ? 0.55 : 0.5;
-    return { coverage, precision, ok: inkCount > 40 && coverage >= covThr && precision >= precThr };
+    const res = { coverage, precision, ok: inkCount > 40 && coverage >= covThr && precision >= precThr, mirrored: false };
+    // Letras asimétricas: si la tinta reflejada encaja claramente mejor que la real, está en espejo.
+    if (!mirror && inkCount > 40 && this.text.length === 1 && 'bdpqBDPQJLFEKNSZszjrcCGfeaghyRPNZ'.includes(this.text)) {
+      const m = this.evaluate(true);
+      const score = r => r.coverage * 0.6 + r.precision * 0.4;
+      if (m.coverage >= covThr && m.precision >= precThr && score(m) > score(res) + 0.12) { res.mirrored = true; res.ok = false; }
+    }
+    return res;
   }
 }

@@ -4,7 +4,9 @@
    primero las de trazo y sonido más sencillos (m, p, s, l, t, n, d). */
 const DATA = (() => {
   const VOWELS = ['a', 'e', 'i', 'o', 'u'];
-  const CONSONANTS = ['m', 'p', 's', 'l', 't', 'n', 'd', 'f', 'r', 'b', 'c', 'g', 'v', 'z', 'ñ', 'j', 'y', 'h'];
+  const CONSONANTS = ['m', 'p', 's', 'l', 't', 'n', 'd', 'f', 'r', 'b', 'c', 'g', 'v', 'z', 'ñ', 'j', 'y', 'h', 'qu', 'ch', 'll'];
+  // Consonantes continuas (se pueden alargar: mmm, sss): más fáciles para oír el sonido inicial.
+  const CONTINUOUS = ['m', 's', 'l', 'f', 'n', 'r', 'z', 'j', 'ñ', 'y', 'v', 'll'];
 
   // name: cómo se dice el nombre de la letra. word/emoji: ejemplo para presentarla.
   // vowels: restringe las sílabas que se forman (za zo zu; nunca "ze", "zi").
@@ -24,15 +26,26 @@ const DATA = (() => {
     f: { name: 'efe', word: 'foca', emoji: '🦭' },
     r: { name: 'erre', word: 'ratón', emoji: '🐭' },
     b: { name: 'be', word: 'bebé', emoji: '👶' },
-    c: { name: 'ce', word: 'casa', emoji: '🏠' },
-    g: { name: 'ge', word: 'gato', emoji: '🐱' },
+    c: { name: 'ce', word: 'casa', emoji: '🏠', vowels: ['a', 'o', 'u'] },
+    g: { name: 'ge', word: 'gato', emoji: '🐱', vowels: ['a', 'o', 'u'] },
     v: { name: 'uve', word: 'vaca', emoji: '🐄' },
     z: { name: 'zeta', word: 'zapato', emoji: '👟', vowels: ['a', 'o', 'u'] },
     'ñ': { name: 'eñe', word: 'piña', emoji: '🍍' },
     j: { name: 'jota', word: 'jirafa', emoji: '🦒' },
     y: { name: 'ye', word: 'yoyó', emoji: '🪀' },
-    h: { name: 'hache', word: 'hoja', emoji: '🍃' },
+    h: { name: 'hache', word: 'hoja', emoji: '🍃', silent: true },
+    qu: { name: 'cu', word: 'queso', emoji: '🧀', vowels: ['e', 'i'], digraph: true },
+    ch: { name: 'che', word: 'chocolate', emoji: '🍫', digraph: true },
+    ll: { name: 'elle', word: 'llave', emoji: '🔑', digraph: true },
   };
+  /* Lecciones de consonantes. La c y la g se parten en dos: ca/co/cu y ce/ci; ga/go/gu y ge/gi,
+     porque suenan distinto (Cuetos 2010). Los dígrafos van al final como "dos letras, un sonido". */
+  const CONSONANT_LESSONS = CONSONANTS.flatMap(c => {
+    const base = { id: 'c-' + c, title: c.toUpperCase() + ' ' + c, emoji: LETTERS[c].emoji, type: 'consonant', letter: c };
+    if (c === 'c') return [base, { id: 'c-ce', title: 'Ce ci', emoji: '🍒', type: 'consonant', letter: 'c', syllables: ['ce', 'ci'], word: 'cereza', nameHint: 'ce, ci' }];
+    if (c === 'g') return [base, { id: 'c-ge', title: 'Ge gi', emoji: '🌻', type: 'consonant', letter: 'g', syllables: ['ge', 'gi'], word: 'girasol', nameHint: 'ge, gi' }];
+    return [base];
+  });
 
   // Palabras decodificables con sílabas directas (consonante + vocal) o vocal sola.
   // tier 1: solo consonantes m p s l t n d.  tier 2: el resto.
@@ -73,6 +86,9 @@ const DATA = (() => {
     W('corona', ['co', 'ro', 'na'], '👑', 2), W('regalo', ['re', 'ga', 'lo'], '🎁', 2),
     W('cometa', ['co', 'me', 'ta'], '🪁', 2), W('música', ['mú', 'si', 'ca'], '🎶', 2),
     W('mariposa', ['ma', 'ri', 'po', 'sa'], '🦋', 2), W('teléfono', ['te', 'lé', 'fo', 'no'], '📞', 2),
+    W('queso', ['que', 'so'], '🧀', 3), W('coche', ['co', 'che'], '🚗', 3), W('leche', ['le', 'che'], '🥛', 3),
+    W('llave', ['lla', 've'], '🔑', 3), W('pollo', ['po', 'llo'], '🐔', 3), W('gallina', ['ga', 'lli', 'na'], '🐓', 3),
+    W('chocolate', ['cho', 'co', 'la', 'te'], '🍫', 3), W('cebolla', ['ce', 'bo', 'lla'], '🧅', 3), W('máquina', ['má', 'qui', 'na'], '🤖', 3),
   ];
   const wordByText = Object.fromEntries(WORDS.map(x => [x.w, x]));
 
@@ -96,7 +112,7 @@ const DATA = (() => {
   function initialWords() {
     const fromWords = WORDS.map(x => ({ w: x.w, e: x.e, l: x.w[0] }));
     const fromLetters = Object.entries(LETTERS).map(([l, i]) => ({ w: i.word, e: i.emoji, l }));
-    const all = [...fromLetters, ...INITIAL_EXTRA, ...fromWords].filter(x => x.l !== 'h');
+    const all = [...fromLetters, ...INITIAL_EXTRA, ...fromWords].filter(x => x.l.length === 1 && x.l !== 'h' && !/^(ch|ll|qu)/.test(x.w));
     const seen = new Set();
     return all.filter(x => { const k = x.w.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); if (seen.has(k)) return false; seen.add(k); return true; })
       .map(x => ({ ...x, l: x.l.normalize('NFD').replace(/[\u0300-\u036f]/g, '') }));
@@ -120,7 +136,7 @@ const DATA = (() => {
     {
       id: 'letras', title: 'Las letras', emoji: '🧱', color: 'accent',
       hint: 'Cada consonante con sus sílabas: ma, me, mi, mo, mu…',
-      lessons: CONSONANTS.map(c => ({ id: 'c-' + c, title: c.toUpperCase() + ' ' + c, emoji: LETTERS[c].emoji, type: 'consonant', letter: c })),
+      lessons: CONSONANT_LESSONS,
     },
     {
       id: 'silabas', title: 'Las sílabas', emoji: '🧩', color: 'good',
@@ -134,6 +150,7 @@ const DATA = (() => {
         { id: 's-cgv', title: 'C, G y V', emoji: '🐱', type: 'syllables', consonants: ['c', 'g', 'v'] },
         { id: 's-znj', title: 'Z, Ñ y J', emoji: '🦒', type: 'syllables', consonants: ['z', 'ñ', 'j'] },
         { id: 's-yh', title: 'Y y H', emoji: '🍃', type: 'syllables', consonants: ['y', 'h'] },
+        { id: 's-dig', title: 'Qu, Ch y Ll', emoji: '🧀', type: 'syllables', consonants: ['qu', 'ch', 'll'] },
         { id: 's-mix2', title: 'Mezcla 2', emoji: '🎪', type: 'syllables', consonants: CONSONANTS },
       ],
     },
@@ -148,6 +165,7 @@ const DATA = (() => {
         { id: 'w-5', title: 'Palabras 5', emoji: '🏠', type: 'words', words: pick('casa', 'gato', 'rana', 'bebé', 'vaca', 'nube', 'boca', 'cama') },
         { id: 'w-6', title: 'Palabras 6', emoji: '🍍', type: 'words', words: pick('piña', 'vela', 'bota', 'hoja', 'rosa', 'pera', 'foca', 'café', 'uva', 'bici', 'coco', 'pavo', 'hada', 'búho', 'yoyó') },
         { id: 'w-7', title: 'Palabras 7', emoji: '🦋', type: 'words', words: pick('zapato', 'jirafa', 'cereza', 'camisa', 'cohete', 'banana', 'abeja', 'araña', 'helado', 'oveja', 'gorila', 'conejo', 'corona', 'regalo', 'cometa', 'música', 'mariposa', 'teléfono') },
+        { id: 'w-8', title: 'Letras dobles', emoji: '🔑', type: 'words', words: pick('queso', 'coche', 'leche', 'llave', 'pollo', 'gallina', 'chocolate', 'cebolla', 'máquina') },
       ],
     },
     {
@@ -161,12 +179,22 @@ const DATA = (() => {
         { id: 'g-perdida', title: 'Sílaba perdida', emoji: '🧩', type: 'game', game: 'missing' },
         { id: 'g-cual', title: '¿Cuál es?', emoji: '🎯', type: 'game', game: 'which' },
         { id: 'g-dictado', title: 'Dictado', emoji: '✏️', type: 'game', game: 'dictation' },
+        { id: 'g-repaso', title: 'Repaso', emoji: '🔁', type: 'game', game: 'review' },
       ],
     },
   ];
 
-  const PRAISES = ['¡Muy bien!', '¡Genial!', '¡Lo hiciste!', '¡Bravo!', '¡Fantástico!', '¡Qué bien lo haces!', '¡Eres una campeona!'];
-  const RETRY = ['Casi. Inténtalo otra vez.', 'Mmm, no. Prueba de nuevo.', 'Escucha otra vez.'];
+  const PRAISES = ['¡Lo has conseguido!', '¡Bien hecho!', '¡Has escuchado muy bien!', '¡Lo has encontrado!', '¡Así se hace!', '¡Muy bien pensado!'];
+  const PRAISES_RETRY = ['Lo has vuelto a intentar y ha salido.', 'Has seguido probando y lo has conseguido.', 'Esta vez sí. Bien hecho.'];
+  const RETRY = ['Casi. Inténtalo otra vez.', 'Todavía no. Prueba de nuevo.', 'Escucha otra vez.'];
+  /* Sugerencias fuera de pantalla para la familia (McTigue 2020: el efecto aparece con un adulto implicado). */
+  const FAMILY_TIPS = {
+    vowel: l => `Buscad por casa tres cosas que empiecen por "${l}" y decidlas alargando el sonido.`,
+    consonant: l => `Escribid la ${l.toUpperCase()} grande con el dedo en harina, arena o en la espalda, y decid su sonido mientras.`,
+    syllables: () => 'Dad palmadas con los nombres de la familia: ma-má, pa-pá, y contad cuántas tienen.',
+    words: () => 'Leed juntos un cuento en papel: la niña busca una palabra que conozca y tú lees el resto.',
+    game: () => 'Jugad al "veo veo" con sonidos: "veo veo una cosa que empieza por sss".',
+  };
 
-  return { VOWELS, CONSONANTS, LETTERS, WORDS, WORLDS, PRAISES, RETRY, syllablesFor, wordByText, initialWords, syllableCountWords };
+  return { VOWELS, CONSONANTS, CONTINUOUS, LETTERS, WORDS, WORLDS, PRAISES, PRAISES_RETRY, RETRY, FAMILY_TIPS, syllablesFor, wordByText, initialWords, syllableCountWords };
 })();

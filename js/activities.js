@@ -29,23 +29,28 @@ function promptHTML(text, speakId = 'sp') {
 const A = {};
 
 /* 1. Presentación de una letra. */
-A.intro = letter => async (root, api) => {
-  const info = DATA.LETTERS[letter];
+A.intro = (letter, opts = {}) => async (root, api) => {
+  const base = DATA.LETTERS[letter];
+  const info = Object.assign({}, base, opts.word ? { word: opts.word, emoji: opts.emoji } : {});
   const vowel = isVowel(letter);
-  const syls = vowel ? [] : DATA.syllablesFor(letter);
+  const syls = vowel ? [] : (opts.syllables || DATA.syllablesFor(letter));
+  const shown = opts.nameHint || info.name;
   root.innerHTML = `
-    ${promptHTML(`Esta es la letra <b>${U.esc(info.name)}</b>. Tócala para oírla.`)}
+    ${promptHTML(info.silent ? `La <b>hache</b> es muda: no suena.` : `Esta letra suena como en <b>${U.esc(info.word)}</b>. Tócala para oírla.`)}
     <div class="intro">
-      <button class="bigletter font-letters" id="bl" aria-label="Letra ${U.esc(info.name)}">${letter.toUpperCase()}<span class="lower">${letter}</span></button>
+      <button class="bigletter font-letters" id="bl" aria-label="Letra ${U.esc(shown)}">${letter.toUpperCase()}<span class="lower">${letter}</span></button>
       <button class="example" id="ex"><span class="emoji">${info.emoji}</span><span class="word font-letters">${U.esc(fmtText(info.word))}</span></button>
       ${syls.length ? `<div class="tiles" id="syls">${syls.map(s => `<button class="tile font-letters" data-s="${s}">${U.esc(fmtText(s))}</button>`).join('')}</div>` : ''}
     </div>
     <div class="actions"><button class="btn primary big" id="next" data-say="Siguiente"><span class="ico">➡️</span>Siguiente</button></div>`;
-  const speech = vowel
-    ? `Esta es la letra ${info.name}. ${info.name}, de ${info.word}.`
-    : `Esta es la letra ${info.name}. ${info.name}, de ${info.word}. Con ella decimos: ${syls.join(', ')}.`;
+  // Primero el sonido en contexto (sílabas y palabra), después el nombre, que es el dato secundario.
+  const speech = info.silent
+    ? `Esta es la hache. Es muda: no suena. ${info.word} empieza por hache, pero oímos: ${info.word}. ${syls.join(', ')}.`
+    : vowel
+      ? `Esta letra suena ${info.name}. ${info.name}, como en ${info.word}. Se llama ${info.name}.`
+      : `Esta letra suena como en ${info.word}: ${syls[0]}. Con ella decimos: ${syls.join(', ')}. Se llama ${shown}.`;
   root.querySelector('#sp').onclick = () => api.say(speech);
-  root.querySelector('#bl').onclick = () => { api.sfx('tap'); api.say(info.name); };
+  root.querySelector('#bl').onclick = () => { api.sfx('tap'); Voice.sound(letter, info.name); };
   root.querySelector('#ex').onclick = () => { api.sfx('tap'); api.say(info.word); };
   root.querySelectorAll('.tile').forEach(t => t.onclick = () => { api.sfx('tap'); api.say(t.dataset.s); });
   api.say(speech);
@@ -81,16 +86,16 @@ function pickActivity({ kind, targets, pool, rounds }) {
           const v = card.dataset.v;
           if (v === target) {
             done = true; card.classList.add('correct'); api.sfx('ok');
-            await api.praise();
+            await api.praise(first ? null : U.pick(DATA.PRAISES_RETRY));
             resolve(first);
           } else {
-            first = false; wrong++; api.sfx('no');
-            card.classList.add('wrong'); setTimeout(() => card.classList.remove('wrong'), 700);
+            first = false; wrong++; api.sfx('no'); api.miss(target);
+            card.classList.add('wrong', 'dim'); setTimeout(() => card.classList.remove('wrong'), 700);
             const msg = kind === 'letter'
-              ? `Esa es la ${letterName(v)}. Busca la ${letterName(target)}.`
-              : `Esa es ${v}. Busca: ${target}.`;
+              ? `Esa es la ${letterName(v)}. Escucha: ${letterName(target)}. Busca la ${letterName(target)}.`
+              : `Esa es ${v}. Escucha: ${target}. Busca ${target}.`;
             api.say(msg);
-            if (wrong >= 2) cards.find(c => c.dataset.v === target).classList.add('hint');
+            if (wrong >= 2) { cards.find(c => c.dataset.v === target).classList.add('hint'); api.say(`Es esta: ${kind === 'letter' ? letterName(target) : target}. Tócala.`); }
           }
         });
       });
@@ -104,13 +109,13 @@ A.pickLetter = (target, pool, rounds) => pickActivity({ kind: 'letter', targets:
 A.pickSyllable = (targets, pool, rounds) => pickActivity({ kind: 'syllable', targets, pool, rounds });
 
 /* 3. Forma la sílaba: consonante + vocal. */
-A.buildSyllable = (consonants, rounds) => async (root, api) => {
+A.buildSyllable = (consonants, rounds, only = null) => async (root, api) => {
   let hits = 0;
-  const extra = DATA.CONSONANTS.filter(c => !consonants.includes(c));
+  const extra = DATA.CONSONANTS.filter(c => !consonants.includes(c) && c.length === 1);
   for (let r = 0; r < rounds; r++) {
     if (!api.alive()) return { hits, total: rounds };
     const c = U.pick(consonants);
-    const v = U.pick(DATA.LETTERS[c].vowels || DATA.VOWELS);
+    const v = only ? U.pick(only).slice(c.length) : U.pick(DATA.LETTERS[c].vowels || DATA.VOWELS);
     const target = c + v;
     const consRow = U.shuffle([...new Set([c, ...U.shuffle(consonants).slice(0, 2), ...extra])].slice(0, 3));
     const spoken = `Forma la sílaba: ${target}.`;
@@ -130,11 +135,10 @@ A.buildSyllable = (consonants, rounds) => async (root, api) => {
         const made = sel[0] + sel[1];
         if (made === target) {
           done = true; slots.forEach(s => s.classList.add('correct')); api.sfx('ok');
-          api.say(target);
-          await api.praise();
+          await api.praise(`${target}. Has juntado la ${letterName(sel[0])} y la ${sel[1]}.`);
           resolve(first);
         } else {
-          first = false; api.sfx('no');
+          first = false; api.sfx('no'); api.miss(target);
           slots.forEach(s => s.classList.add('wrong'));
           api.say(`Eso dice ${made}. Escucha otra vez: ${target}.`);
           await U.wait(900);
@@ -263,8 +267,14 @@ A.trace = (text, { guide = true, spoken = null } = {}) => async (root, api) => {
       const res = tracer.evaluate();
       if (res.ok) {
         api.sfx('ok');
-        await api.praise();
+        await api.praise(attempts ? U.pick(DATA.PRAISES_RETRY) : `Has seguido la forma de la ${speakText}.`);
         return { hits: attempts === 0 ? 1 : 0, total: 1 };
+      }
+      if (res.mirrored) {
+        // Letra en espejo: normal hasta los 7 años. Se muestra el modelo con su punto de inicio y no cuenta como intento.
+        api.say(`Está del revés. Mira el punto verde: ahí empieza. Vuelve a hacerla.`);
+        tracer.showHint(4000);
+        continue;
       }
       attempts++;
       api.sfx('no');
@@ -305,15 +315,15 @@ function buildSteps(lesson) {
     const idx = DATA.CONSONANTS.indexOf(c);
     const known = DATA.CONSONANTS.slice(0, idx);
     const pool = [c, ...known.slice(-3), ...DATA.VOWELS];
-    const syls = DATA.syllablesFor(c);
+    const syls = lesson.syllables || DATA.syllablesFor(c);
     return [
-      { name: 'Conoce', run: A.intro(c) },
+      { name: 'Conoce', run: A.intro(c, lesson) },
       { name: 'Escucha y toca', run: A.pickLetter(c, pool, 3) },
-      { name: '¿Con qué empieza?', run: A.initialSound([c, ...known.slice(-2), ...DATA.VOWELS.slice(0, 2)], 2) },
+      ...(c.length === 1 && c !== 'h' && !lesson.syllables ? [{ name: '¿Con qué empieza?', run: A.initialSound([c, ...known.filter(k => k.length === 1 && k !== 'h').slice(-2), ...DATA.VOWELS.slice(0, 2)], 2) }] : []),
       ...cases.map(k => ({ name: 'Traza', run: traceLetter(c, k, true) })),
-      { name: 'Sílabas', run: A.pickSyllable(syls, syls, 3) },
-      { name: 'Forma', run: A.buildSyllable([c], 3) },
-      { name: 'Dilo tú', run: A.saySyllable(c, U.pick(DATA.LETTERS[c].vowels || DATA.VOWELS)) },
+      { name: 'Sílabas', run: A.pickSyllable(syls, [...syls, ...known.slice(-1).flatMap(DATA.syllablesFor)], 3) },
+      { name: 'Forma', run: A.buildSyllable([c], 3, lesson.syllables) },
+      { name: 'Dilo tú', run: A.saySyllable(c, U.pick(lesson.syllables ? lesson.syllables.map(x => x.slice(c.length)) : (DATA.LETTERS[c].vowels || DATA.VOWELS))) },
       { name: 'Traza', run: A.trace(syls[0], { guide: true }) },
       { name: 'Escribe', run: A.trace(U.pick(syls), { guide: false }) },
     ];
@@ -733,15 +743,26 @@ A.dictation = (word) => async (root, api) => {
 /* Lecciones del mundo de juegos: se adaptan a las letras ya trabajadas. */
 function buildGameSteps(lesson) {
   const known = Progress.knownLetters();
+  const single = known.filter(l => l.length === 1 && l !== 'h');
   const cons = Progress.knownConsonants();
-  const tier = cons.every(c => DATA.CONSONANTS.indexOf(c) < 7) ? 1 : 2;
+  const tier = cons.every(c => DATA.CONSONANTS.indexOf(c) < 7) ? 1 : cons.some(c => c.length > 1) ? 3 : 2;
   const words = DATA.WORDS.filter(w => w.tier <= tier);
   const pickWords = n => U.shuffle(words).slice(0, n);
+  // Sonido inicial: vocales y consonantes continuas (m, s, l, f, n) antes que las oclusivas (Herrera y Defior 2005).
+  const initialPool = [...DATA.VOWELS, ...single.filter(l => DATA.CONTINUOUS.includes(l)), ...single.filter(l => !DATA.VOWELS.includes(l) && !DATA.CONTINUOUS.includes(l))].slice(0, 8);
   switch (lesson.game) {
-    case 'initial': return [{ name: '¿Con qué empieza?', run: A.initialSound(known, 6) }];
+    case 'initial': return [{ name: '¿Con qué empieza?', run: A.initialSound(initialPool, 6) }];
     case 'clap': return [{ name: 'Palmadas', run: A.clapSyllables(6) }];
-    case 'memory': return [{ name: 'Parejas', run: A.memory(known) }, { name: 'Parejas', run: A.memory(known) }];
-    case 'hunt': return U.shuffle(known).slice(0, 3).map(l => ({ name: 'Caza letras', run: A.huntLetters(l, known, 1) }));
+    case 'memory': return [{ name: 'Parejas', run: A.memory(single) }, { name: 'Parejas', run: A.memory(single) }];
+    case 'hunt': return U.shuffle(single).slice(0, 3).map(l => ({ name: 'Caza letras', run: A.huntLetters(l, single, 1) }));
+    case 'review': {
+      // Repaso espaciado: las letras completadas hace más tiempo vuelven a salir.
+      const due = Progress.dueForReview(3).map(id => id.replace(/^[vc]-/, '')).filter(l => DATA.LETTERS[l]);
+      if (!due.length) return [{ name: 'Repaso', run: A.pickLetter('a', DATA.VOWELS, 3) }];
+      return due.flatMap(l => DATA.VOWELS.includes(l)
+        ? [{ name: 'Repaso', run: A.pickLetter(l, DATA.VOWELS, 2) }, { name: 'Escribe', run: A.trace(fmtText(l) === l.toUpperCase() ? l.toUpperCase() : l, { guide: false, spoken: letterName(l) }) }]
+        : [{ name: 'Repaso', run: A.pickSyllable(DATA.syllablesFor(l), [...DATA.syllablesFor(l), ...DATA.syllablesFor(U.pick(cons))], 2) }, { name: 'Forma', run: A.buildSyllable([l], 1) }]);
+    }
     case 'missing': return pickWords(5).map(w => ({ name: 'Sílaba perdida', run: A.missingSyllable(w, words) }));
     case 'which': return pickWords(5).map(w => ({ name: '¿Cuál es?', run: A.pickWord(w, words) }));
     case 'dictation': return pickWords(4).map(w => ({ name: 'Dictado', run: A.dictation(w) }));

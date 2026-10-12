@@ -41,7 +41,21 @@ const Voice = (() => {
     });
   }
   function stop() { if (supported) try { speechSynthesis.cancel(); } catch (e) { /* nada */ } }
-  return { supported, say, stop, refresh, voices: () => voices, current: () => chosen };
+  /* Sonido de una letra: si hay un audio grabado en audio/sonidos/<letra>.mp3 se usa (la voz
+     sintetizada no sabe pronunciar /m/ aislada); si no, se dice el nombre de la letra. */
+  const soundCache = {};
+  function sound(letter, fallbackText) {
+    return new Promise(resolve => {
+      if (soundCache[letter] === false) return say(fallbackText).then(resolve);
+      const a = soundCache[letter] || new Audio(`audio/sonidos/${encodeURIComponent(letter)}.mp3`);
+      soundCache[letter] = a;
+      stop();
+      a.onended = () => resolve();
+      a.onerror = () => { soundCache[letter] = false; say(fallbackText).then(resolve); };
+      a.play().catch(() => { soundCache[letter] = false; say(fallbackText).then(resolve); });
+    });
+  }
+  return { supported, say, sound, stop, refresh, voices: () => voices, current: () => chosen };
 })();
 
 const Sfx = (() => {
@@ -66,7 +80,7 @@ const Sfx = (() => {
   const PATTERNS = {
     tap: [[520, 0, 0.08, 'triangle']],
     ok: [[523, 0, 0.12], [659, 0.1, 0.12], [784, 0.2, 0.2]],
-    no: [[220, 0, 0.18, 'sawtooth', 0.08], [180, 0.12, 0.22, 'sawtooth', 0.08]],
+    no: [[392, 0, 0.14, 'sine', 0.1], [330, 0.13, 0.2, 'sine', 0.1]],  // dos notas suaves descendentes, sin zumbido
     win: [[523, 0, 0.14], [659, 0.12, 0.14], [784, 0.24, 0.14], [1046, 0.36, 0.35]],
     pop: [[880, 0, 0.06, 'triangle', 0.12]],
   };
