@@ -20,6 +20,7 @@ Sigue el **método silábico** habitual en Infantil: sonidos de las letras, lueg
 | 🧱 Las letras | consonantes en orden de dificultad: m, p, s, l, t, n, d, f, r, b, c, g, v, z, ñ, j, y, h; cada una con sus sílabas | 18 |
 | 🧩 Las sílabas | mezclas de sílabas de varias letras | 9 |
 | 📖 Las palabras | palabras con dibujo, armadas por sílabas; de 2 a 4 sílabas | 7 |
+| 🎪 Los juegos | juegos sueltos, siempre abiertos, que usan las letras ya trabajadas | 7 |
 
 Cada lección encadena actividades cortas y termina con estrellas y una pegatina para el álbum:
 
@@ -34,6 +35,15 @@ Cada lección encadena actividades cortas y termina con estrellas y una pegatina
 | Lee | Ve la palabra escrita (sin audio) y toca su dibujo | Lectura real |
 | Dilo tú | Ve "P + A = ?", oye "¿la pe con la a?" y lo dice al micrófono | Lectura en voz alta de sílabas |
 | Lee en voz alta | Ve la palabra con su dibujo y la lee al micrófono | Lectura en voz alta de palabras |
+| ¿Con qué empieza? | Oye una palabra y ve su dibujo (no la lee); elige la letra inicial | Conciencia fonémica: sonido inicial |
+| Palmadas | Oye una palabra y toca cuántas palmadas (sílabas) tiene, de 1 a 4 | Conciencia silábica |
+| Parejas | Memoria: empareja mayúscula y minúscula de la misma letra | Reconocimiento de ambas formas |
+| Caza letras | Toca todas las letras objetivo en una cuadrícula de 12 | Discriminación visual de letras |
+| Sílaba perdida | Palabra con un hueco; elige la sílaba que falta | Lectura y análisis silábico |
+| ¿Cuál es? | Ve el dibujo y elige la palabra escrita entre tres | Lectura de palabras |
+| Dictado | Oye la palabra y la escribe letra a letra con fichas | Ortografía y segmentación en fonemas |
+
+El mundo 🎪 Los juegos usa las letras que ya tienen estrella (si aún no hay ninguna, m, p y s) y palabras del nivel alcanzado, así que crece con la niña. Varios de estos juegos también aparecen dentro de las lecciones de vocales, consonantes y palabras.
 
 Detalles que importan a esta edad (4 a 7 años, muchos aún no leen):
 

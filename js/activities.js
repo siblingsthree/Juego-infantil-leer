@@ -295,6 +295,7 @@ function buildSteps(lesson) {
     return [
       { name: 'Conoce', run: A.intro(v) },
       { name: 'Escucha y toca', run: A.pickLetter(v, DATA.VOWELS, 3) },
+      { name: '¿Con qué empieza?', run: A.initialSound(DATA.VOWELS, 2) },
       ...cases.map(c => ({ name: 'Traza', run: traceLetter(v, c, true) })),
       { name: 'Escribe', run: traceLetter(v, cases[0], false) },
     ];
@@ -308,6 +309,7 @@ function buildSteps(lesson) {
     return [
       { name: 'Conoce', run: A.intro(c) },
       { name: 'Escucha y toca', run: A.pickLetter(c, pool, 3) },
+      { name: '¿Con qué empieza?', run: A.initialSound([c, ...known.slice(-2), ...DATA.VOWELS.slice(0, 2)], 2) },
       ...cases.map(k => ({ name: 'Traza', run: traceLetter(c, k, true) })),
       { name: 'Sílabas', run: A.pickSyllable(syls, syls, 3) },
       { name: 'Forma', run: A.buildSyllable([c], 3) },
@@ -327,16 +329,18 @@ function buildSteps(lesson) {
       { name: 'Escribe', run: A.trace(U.pick(syls), { guide: false }) },
     ];
   }
+  if (lesson.type === 'game') return buildGameSteps(lesson);
   if (lesson.type === 'words') {
     const ws = U.shuffle(lesson.words).slice(0, 6);
     const w = i => ws[i % ws.length];
     return [
       { name: 'Arma', run: A.buildWord(w(0), lesson.words) },
       { name: 'Lee', run: A.readWord(w(1), lesson.words) },
-      { name: 'Arma', run: A.buildWord(w(2), lesson.words) },
+      { name: 'Sílaba perdida', run: A.missingSyllable(w(2), lesson.words) },
       { name: 'Traza', run: A.trace(w(3).w, { guide: true }) },
-      { name: 'Lee', run: A.readWord(w(4), lesson.words) },
+      { name: '¿Cuál es?', run: A.pickWord(w(4), lesson.words) },
       { name: 'Lee en voz alta', run: A.sayWord(w(1)) },
+      { name: 'Dictado', run: A.dictation(w(0)) },
       { name: 'Escribe', run: A.trace(w(5).w, { guide: false }) },
     ];
   }
@@ -449,3 +453,298 @@ A.sayWord = word => speakActivity({
   promptSpoken: 'Lee la palabra en voz alta. Toca el micrófono y dila.',
   modelSpoken: word.s.join(', ') + '. ' + word.w,
 });
+
+/* ====================== Juegos de conciencia fonológica y lectura ====================== */
+
+/* 8. ¿Con qué empieza? Se oye la palabra y se ve el dibujo (no se lee); se elige la letra inicial. */
+A.initialSound = (letters, rounds) => async (root, api) => {
+  let hits = 0;
+  const bank = DATA.initialWords().filter(x => letters.includes(x.l));
+  const used = new Set();
+  for (let r = 0; r < rounds; r++) {
+    if (!api.alive()) return { hits, total: rounds };
+    const candidates = bank.filter(x => !used.has(x.w));
+    const item = U.pick(candidates.length ? candidates : bank);
+    used.add(item.w);
+    const distractors = U.shuffle(letters.filter(l => l !== item.l)).slice(0, 2);
+    const options = U.shuffle([item.l, ...distractors]);
+    const spoken = `${item.w}. ¿Con qué letra empieza ${item.w}?`;
+    root.innerHTML = `
+      ${promptHTML('¿Con qué letra empieza?')}
+      <div class="round-count">${r + 1} / ${rounds}</div>
+      <button class="word-target big-emoji" id="pic" aria-label="${U.esc(item.w)}"><span class="emoji">${item.e}</span></button>
+      <div class="cards" id="cards">${options.map(o => `<button class="card font-letters" data-v="${o}">${U.esc(fmtLetter(o))}</button>`).join('')}</div>`;
+    root.querySelector('#sp').onclick = () => api.say(spoken);
+    root.querySelector('#pic').onclick = () => { api.sfx('tap'); api.say(item.w); };
+    api.say(spoken);
+    const cards = [...root.querySelectorAll('.card')];
+    let wrong = 0, first = true, done = false;
+    const ok = await new Promise(resolve => {
+      cards.forEach(card => card.onclick = async () => {
+        if (done) return;
+        if (card.dataset.v === item.l) {
+          done = true; card.classList.add('correct'); api.sfx('ok');
+          api.say(`${item.w} empieza por ${letterName(item.l)}.`);
+          await api.praise();
+          resolve(first);
+        } else {
+          first = false; wrong++; api.sfx('no');
+          card.classList.add('wrong'); setTimeout(() => card.classList.remove('wrong'), 700);
+          api.say(`${letterName(card.dataset.v)}, no. Escucha el principio: ${item.w}.`);
+          if (wrong >= 2) cards.find(c => c.dataset.v === item.l).classList.add('hint');
+        }
+      });
+    });
+    if (ok) hits++;
+    await U.wait(400);
+  }
+  return { hits, total: rounds };
+};
+
+/* 9. Palmadas: contar las sílabas de una palabra oída. */
+A.clapSyllables = (rounds) => async (root, api) => {
+  let hits = 0;
+  const bank = DATA.syllableCountWords();
+  const used = new Set();
+  for (let r = 0; r < rounds; r++) {
+    if (!api.alive()) return { hits, total: rounds };
+    const wantN = [1, 2, 3, 2, 4, 1, 3][r % 7];
+    const pool = bank.filter(x => x.n === wantN && !used.has(x.w));
+    const item = U.pick(pool.length ? pool : bank);
+    used.add(item.w);
+    const spoken = `${item.w}. ¿Cuántas palmadas tiene ${item.w}? ${item.s.join(', ')}.`;
+    root.innerHTML = `
+      ${promptHTML('¿Cuántas palmadas tiene?')}
+      <div class="round-count">${r + 1} / ${rounds}</div>
+      <button class="word-target big-emoji" id="pic" aria-label="${U.esc(item.w)}"><span class="emoji">${item.e}</span></button>
+      <div class="syl-reveal font-letters" id="reveal"></div>
+      <div class="claps" id="claps">${[1, 2, 3, 4].map(n => `<button class="clap" data-n="${n}" aria-label="${n}">${'👏'.repeat(n)}<b>${n}</b></button>`).join('')}</div>`;
+    root.querySelector('#sp').onclick = () => api.say(spoken);
+    root.querySelector('#pic').onclick = () => { api.sfx('tap'); api.say(item.s.join('. ')); };
+    api.say(spoken);
+    const claps = [...root.querySelectorAll('.clap')];
+    const reveal = root.querySelector('#reveal');
+    let first = true, done = false;
+    const ok = await new Promise(resolve => {
+      claps.forEach(b => b.onclick = async () => {
+        if (done) return;
+        const n = +b.dataset.n;
+        if (n === item.n) {
+          done = true; b.classList.add('correct'); api.sfx('ok');
+          reveal.innerHTML = item.s.map(x => `<span class="syl-chip">${U.esc(fmtText(x))}</span>`).join('');
+          api.say(`${item.s.join(', ')}. ${item.n === 1 ? 'Una palmada' : item.n + ' palmadas'}.`);
+          await api.praise();
+          resolve(first);
+        } else {
+          first = false; api.sfx('no');
+          b.classList.add('wrong'); setTimeout(() => b.classList.remove('wrong'), 700);
+          api.say(`Vamos a dar palmadas juntos: ${item.s.join('. ')}.`);
+        }
+      });
+    });
+    if (ok) hits++;
+    await U.wait(500);
+  }
+  return { hits, total: rounds };
+};
+
+/* 10. Parejas: memoria con mayúscula y minúscula de la misma letra. */
+A.memory = (letters) => async (root, api) => {
+  const chosen = U.shuffle(letters).slice(0, 4);
+  const cards = U.shuffle(chosen.flatMap(l => [{ l, face: l.toUpperCase() }, { l, face: l }]));
+  root.innerHTML = `
+    ${promptHTML('Busca las parejas: mayúscula y minúscula')}
+    <div class="memory" id="mem">${cards.map((c, i) => `<button class="mcard" data-i="${i}" data-l="${c.l}" aria-label="Carta"><span class="mcard-back">?</span><span class="mcard-face font-letters">${U.esc(c.face)}</span></button>`).join('')}</div>`;
+  root.querySelector('#sp').onclick = () => api.say('Busca las parejas. Cada letra grande tiene su letra pequeña.');
+  api.say('Busca las parejas. Toca dos cartas: la letra grande y su letra pequeña.');
+  const els = [...root.querySelectorAll('.mcard')];
+  let open = [], lock = false, found = 0, misses = 0;
+  await new Promise(resolve => {
+    els.forEach(el => el.onclick = async () => {
+      if (lock || el.classList.contains('open') || el.classList.contains('matched')) return;
+      api.sfx('tap');
+      el.classList.add('open');
+      api.say(letterName(el.dataset.l));
+      open.push(el);
+      if (open.length < 2) return;
+      lock = true;
+      const [a, b] = open;
+      if (a.dataset.l === b.dataset.l) {
+        await U.wait(500);
+        a.classList.add('matched'); b.classList.add('matched'); api.sfx('ok');
+        found++;
+        if (found === chosen.length) { await api.praise(); resolve(); }
+      } else {
+        misses++;
+        await U.wait(1100);
+        a.classList.remove('open'); b.classList.remove('open'); api.sfx('no');
+      }
+      open = []; lock = false;
+    });
+  });
+  // Puntúa como "a la primera" si hubo pocos fallos para el número de parejas.
+  return { hits: misses <= chosen.length ? 1 : 0, total: 1 };
+};
+
+/* 11. Caza letras: tocar todas las letras objetivo en una cuadrícula. */
+A.huntLetters = (target, pool, rounds) => async (root, api) => {
+  let hits = 0;
+  for (let r = 0; r < rounds; r++) {
+    if (!api.alive()) return { hits, total: rounds };
+    const count = 3 + (r % 2);
+    const others = pool.filter(l => l !== target);
+    const grid = U.shuffle([...Array(count).fill(target), ...Array.from({ length: 12 - count }, () => U.pick(others))]);
+    const spoken = `Busca todas las letras ${letterName(target)}. Hay ${count}.`;
+    root.innerHTML = `
+      ${promptHTML(`Caza todas las <b>${U.esc(letterName(target))}</b>`)}
+      <div class="round-count" id="left">Quedan ${count}</div>
+      <div class="hunt" id="hunt">${grid.map((l, i) => `<button class="hcell font-letters" data-v="${l}" data-i="${i}">${U.esc(fmtLetter(l))}</button>`).join('')}</div>`;
+    root.querySelector('#sp').onclick = () => api.say(spoken);
+    api.say(spoken);
+    const cells = [...root.querySelectorAll('.hcell')];
+    const left = root.querySelector('#left');
+    let remaining = count, wrong = 0, done = false;
+    await new Promise(resolve => {
+      cells.forEach(c => c.onclick = async () => {
+        if (done || c.classList.contains('found')) return;
+        if (c.dataset.v === target) {
+          c.classList.add('found'); api.sfx('pop'); remaining--;
+          left.textContent = remaining ? `Quedan ${remaining}` : '¡Todas!';
+          if (!remaining) { done = true; api.sfx('ok'); await api.praise(); resolve(); }
+        } else {
+          wrong++; api.sfx('no');
+          c.classList.add('wrong'); setTimeout(() => c.classList.remove('wrong'), 600);
+          api.say(`Esa es la ${letterName(c.dataset.v)}. Busca la ${letterName(target)}.`);
+        }
+      });
+    });
+    if (wrong === 0) hits++;
+    await U.wait(400);
+  }
+  return { hits, total: rounds };
+};
+
+/* 12. Sílaba perdida: la palabra con un hueco y tres sílabas para elegir. */
+A.missingSyllable = (word, lessonWords) => async (root, api) => {
+  const idx = Math.floor(Math.random() * word.s.length);
+  const missing = word.s[idx];
+  const others = [...new Set(lessonWords.flatMap(w => w.s).filter(s => s !== missing))];
+  const options = U.shuffle([missing, ...U.shuffle(others).slice(0, 2)]);
+  const spoken = `${word.w}. Falta una sílaba. ¿Cuál es?`;
+  root.innerHTML = `
+    ${promptHTML('¿Qué sílaba falta?')}
+    <button class="word-target" id="pic" aria-label="${U.esc(word.w)}"><span class="emoji">${word.e}</span></button>
+    <div class="slots font-letters" id="slots">${word.s.map((s, i) => i === idx ? '<span class="slot gap"></span>' : `<span class="slot filled">${U.esc(fmtText(s))}</span>`).join('')}</div>
+    <div class="tiles" id="tiles">${options.map(s => `<button class="tile font-letters" data-v="${U.esc(s)}">${U.esc(fmtText(s))}</button>`).join('')}</div>`;
+  root.querySelector('#sp').onclick = () => api.say(spoken);
+  root.querySelector('#pic').onclick = () => { api.sfx('tap'); api.say(word.w); };
+  api.say(spoken);
+  const gap = root.querySelector('.slot.gap');
+  let first = true, done = false;
+  const ok = await new Promise(resolve => {
+    root.querySelectorAll('.tile').forEach(t => t.onclick = async () => {
+      if (done) return;
+      if (t.dataset.v === missing) {
+        done = true; gap.textContent = fmtText(missing); gap.classList.add('correct'); t.classList.add('used'); api.sfx('ok');
+        api.say(word.s.join(', ') + '. ' + word.w);
+        await api.praise();
+        resolve(first);
+      } else {
+        first = false; api.sfx('no');
+        t.classList.add('wrong'); setTimeout(() => t.classList.remove('wrong'), 700);
+        const tryWord = word.s.map((s, i) => i === idx ? t.dataset.v : s).join('');
+        api.say(`Eso diría ${tryWord}. Escucha: ${word.s.join(', ')}.`);
+      }
+    });
+  });
+  return { hits: ok ? 1 : 0, total: 1 };
+};
+
+/* 13. ¿Cuál es? Se ve el dibujo y se elige la palabra escrita entre tres (lectura). */
+A.pickWord = (word, lessonWords) => async (root, api) => {
+  const others = U.shuffle(lessonWords.filter(w => w.w !== word.w)).slice(0, 2);
+  const options = U.shuffle([word, ...others]);
+  const spoken = `${word.w}. ¿Dónde pone ${word.w}?`;
+  root.innerHTML = `
+    ${promptHTML('¿Dónde pone la palabra?')}
+    <button class="word-target" id="pic" aria-label="${U.esc(word.w)}"><span class="emoji">${word.e}</span></button>
+    <div class="cards words" id="cards">${options.map(o => `<button class="card word-card font-letters" data-v="${U.esc(o.w)}">${U.esc(fmtText(o.w))}</button>`).join('')}</div>`;
+  root.querySelector('#sp').onclick = () => api.say(spoken);
+  root.querySelector('#pic').onclick = () => { api.sfx('tap'); api.say(word.w); };
+  api.say(spoken);
+  let first = true, done = false;
+  const ok = await new Promise(resolve => {
+    root.querySelectorAll('.card').forEach(card => card.onclick = async () => {
+      if (done) return;
+      if (card.dataset.v === word.w) {
+        done = true; card.classList.add('correct'); api.sfx('ok');
+        await api.praise();
+        resolve(first);
+      } else {
+        first = false; api.sfx('no');
+        card.classList.add('wrong'); setTimeout(() => card.classList.remove('wrong'), 700);
+        const o = DATA.wordByText[card.dataset.v];
+        api.say(`Ahí pone ${o.w}: ${o.s.join(', ')}. Busca ${word.w}: ${word.s.join(', ')}.`);
+      }
+    });
+  });
+  return { hits: ok ? 1 : 0, total: 1 };
+};
+
+/* 14. Dictado: se oye la palabra y se escribe letra a letra con fichas. */
+A.dictation = (word) => async (root, api) => {
+  const letters = [...word.w.normalize('NFD').replace(/[̀-ͯ]/g, '')];
+  const extra = U.shuffle(['a', 'e', 'i', 'o', 'u', 'm', 'p', 's', 'l', 't', 'n', 'd'].filter(l => !letters.includes(l))).slice(0, 2);
+  const tiles = U.shuffle([...letters, ...extra]);
+  const spoken = `Dictado: ${word.w}. ${word.s.join(', ')}. Escribe ${word.w} con las letras.`;
+  root.innerHTML = `
+    ${promptHTML('Escribe la palabra que oyes')}
+    <button class="word-target" id="pic" aria-label="${U.esc(word.w)}"><span class="emoji">${word.e}</span></button>
+    <div class="slots letters font-letters" id="slots">${letters.map(() => '<span class="slot small"></span>').join('')}</div>
+    <div class="tiles" id="tiles">${tiles.map((l, i) => `<button class="tile small font-letters" data-v="${l}" data-i="${i}">${U.esc(fmtText(l))}</button>`).join('')}</div>`;
+  root.querySelector('#sp').onclick = () => api.say(spoken);
+  root.querySelector('#pic').onclick = () => { api.sfx('tap'); api.say(word.s.join('. ')); };
+  api.say(spoken);
+  const slots = [...root.querySelectorAll('.slot')];
+  let pos = 0, first = true, done = false;
+  const ok = await new Promise(resolve => {
+    root.querySelectorAll('.tile').forEach(t => t.onclick = async () => {
+      if (done || t.disabled) return;
+      if (t.dataset.v === letters[pos]) {
+        api.sfx('pop'); t.disabled = true; t.classList.add('used');
+        slots[pos].textContent = fmtText(t.dataset.v); slots[pos].classList.add('filled'); pos++;
+        if (pos === letters.length) {
+          done = true; slots.forEach(s => s.classList.add('correct')); api.sfx('ok');
+          await api.say(word.w);
+          await api.praise();
+          resolve(first);
+        } else api.say(letterName(t.dataset.v));
+      } else {
+        first = false; api.sfx('no');
+        t.classList.add('wrong'); setTimeout(() => t.classList.remove('wrong'), 700);
+        const sylIdx = (() => { let n = 0; for (let i = 0; i < word.s.length; i++) { n += word.s[i].length; if (pos < n) return i; } return word.s.length - 1; })();
+        api.say(`Escucha: ${word.s[sylIdx]}. ${word.s.join(', ')}.`);
+      }
+    });
+  });
+  return { hits: ok ? 1 : 0, total: 1 };
+};
+
+/* Lecciones del mundo de juegos: se adaptan a las letras ya trabajadas. */
+function buildGameSteps(lesson) {
+  const known = Progress.knownLetters();
+  const cons = Progress.knownConsonants();
+  const tier = cons.every(c => DATA.CONSONANTS.indexOf(c) < 7) ? 1 : 2;
+  const words = DATA.WORDS.filter(w => w.tier <= tier);
+  const pickWords = n => U.shuffle(words).slice(0, n);
+  switch (lesson.game) {
+    case 'initial': return [{ name: '¿Con qué empieza?', run: A.initialSound(known, 6) }];
+    case 'clap': return [{ name: 'Palmadas', run: A.clapSyllables(6) }];
+    case 'memory': return [{ name: 'Parejas', run: A.memory(known) }, { name: 'Parejas', run: A.memory(known) }];
+    case 'hunt': return U.shuffle(known).slice(0, 3).map(l => ({ name: 'Caza letras', run: A.huntLetters(l, known, 1) }));
+    case 'missing': return pickWords(5).map(w => ({ name: 'Sílaba perdida', run: A.missingSyllable(w, words) }));
+    case 'which': return pickWords(5).map(w => ({ name: '¿Cuál es?', run: A.pickWord(w, words) }));
+    case 'dictation': return pickWords(4).map(w => ({ name: 'Dictado', run: A.dictation(w) }));
+  }
+  return [];
+}

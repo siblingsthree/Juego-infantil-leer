@@ -40,10 +40,16 @@ const Progress = (() => {
     save();
   }
   function isUnlocked(world, idx) {
-    if (Settings.get().freeMode || idx === 0) return true;
+    if (Settings.get().freeMode || world.free || idx === 0) return true;
     return stars(world.lessons[idx - 1].id) > 0;
   }
+  /* Consonantes ya trabajadas (con estrella). Si aún no hay ninguna, las tres primeras. */
+  function knownConsonants() {
+    const known = DATA.CONSONANTS.filter(c => stars('c-' + c) > 0);
+    return known.length >= 2 ? known : DATA.CONSONANTS.slice(0, 3);
+  }
+  function knownLetters() { return [...DATA.VOWELS, ...knownConsonants()]; }
   function worldDone(world) { return world.lessons.filter(l => stars(l.id) > 0).length; }
   function reset() { data = { lessons: {}, stickers: [] }; save(); }
-  return { load, stars, complete, isUnlocked, worldDone, reset };
+  return { load, stars, complete, isUnlocked, worldDone, reset, knownConsonants, knownLetters };
 })();

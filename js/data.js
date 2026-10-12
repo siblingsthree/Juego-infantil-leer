@@ -75,6 +75,35 @@ const DATA = (() => {
     W('mariposa', ['ma', 'ri', 'po', 'sa'], '🦋', 2), W('teléfono', ['te', 'lé', 'fo', 'no'], '📞', 2),
   ];
   const wordByText = Object.fromEntries(WORDS.map(x => [x.w, x]));
+
+  // Palabras extra para los juegos de conciencia fonológica (no hace falta que sean decodificables).
+  // "¿Con qué empieza?": el dibujo se oye, no se lee; se elige la letra inicial.
+  const INITIAL_EXTRA = [
+    { w: 'árbol', e: '🌳', l: 'a' }, { w: 'estrella', e: '⭐', l: 'e' }, { w: 'imán', e: '🧲', l: 'i' },
+    { w: 'ojo', e: '👁️', l: 'o' }, { w: 'uno', e: '1️⃣', l: 'u' }, { w: 'manzana', e: '🍎', l: 'm' },
+    { w: 'pan', e: '🍞', l: 'p' }, { w: 'sol', e: '☀️', l: 's' }, { w: 'león', e: '🦁', l: 'l' },
+    { w: 'tren', e: '🚂', l: 't' }, { w: 'nariz', e: '👃', l: 'n' }, { w: 'dinosaurio', e: '🦖', l: 'd' },
+    { w: 'flor', e: '🌸', l: 'f' }, { w: 'reloj', e: '⌚', l: 'r' }, { w: 'barco', e: '⛵', l: 'b' },
+    { w: 'caracol', e: '🐌', l: 'c' }, { w: 'globo', e: '🎈', l: 'g' }, { w: 'violín', e: '🎻', l: 'v' },
+    { w: 'zorro', e: '🦊', l: 'z' }, { w: 'ñu', e: '🐃', l: 'ñ' }, { w: 'jamón', e: '🍖', l: 'j' }, { w: 'yate', e: '🛥️', l: 'y' },
+  ];
+  // Palabras de una sílaba para "Palmadas" (contar sílabas).
+  const MONO = [
+    { w: 'sol', e: '☀️' }, { w: 'pan', e: '🍞' }, { w: 'tren', e: '🚂' }, { w: 'flor', e: '🌸' },
+    { w: 'pez', e: '🐟' }, { w: 'luz', e: '💡' }, { w: 'mar', e: '🌊' }, { w: 'pie', e: '🦶' },
+  ];
+  /* Todas las palabras con su letra inicial (la h es muda: se excluye de este juego). */
+  function initialWords() {
+    const fromWords = WORDS.map(x => ({ w: x.w, e: x.e, l: x.w[0] }));
+    const fromLetters = Object.entries(LETTERS).map(([l, i]) => ({ w: i.word, e: i.emoji, l }));
+    const all = [...fromLetters, ...INITIAL_EXTRA, ...fromWords].filter(x => x.l !== 'h');
+    const seen = new Set();
+    return all.filter(x => { const k = x.w.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); if (seen.has(k)) return false; seen.add(k); return true; })
+      .map(x => ({ ...x, l: x.l.normalize('NFD').replace(/[\u0300-\u036f]/g, '') }));
+  }
+  function syllableCountWords() {
+    return [...MONO.map(x => ({ w: x.w, e: x.e, n: 1, s: [x.w] })), ...WORDS.map(x => ({ w: x.w, e: x.e, n: x.s.length, s: x.s }))];
+  }
   const pick = (...ws) => ws.map(w => wordByText[w]);
 
   function syllablesFor(c) {
@@ -121,10 +150,23 @@ const DATA = (() => {
         { id: 'w-7', title: 'Palabras 7', emoji: '🦋', type: 'words', words: pick('zapato', 'jirafa', 'cereza', 'camisa', 'cohete', 'banana', 'abeja', 'araña', 'helado', 'oveja', 'gorila', 'conejo', 'corona', 'regalo', 'cometa', 'música', 'mariposa', 'teléfono') },
       ],
     },
+    {
+      id: 'juegos', title: 'Los juegos', emoji: '🎪', color: 'pink', free: true,
+      hint: 'Juegos sueltos con las letras que ya conoce. Siempre abiertos.',
+      lessons: [
+        { id: 'g-inicial', title: '¿Con qué empieza?', emoji: '🔔', type: 'game', game: 'initial' },
+        { id: 'g-palmadas', title: 'Palmadas', emoji: '👏', type: 'game', game: 'clap' },
+        { id: 'g-parejas', title: 'Parejas', emoji: '🃏', type: 'game', game: 'memory' },
+        { id: 'g-caza', title: 'Caza letras', emoji: '🔎', type: 'game', game: 'hunt' },
+        { id: 'g-perdida', title: 'Sílaba perdida', emoji: '🧩', type: 'game', game: 'missing' },
+        { id: 'g-cual', title: '¿Cuál es?', emoji: '🎯', type: 'game', game: 'which' },
+        { id: 'g-dictado', title: 'Dictado', emoji: '✏️', type: 'game', game: 'dictation' },
+      ],
+    },
   ];
 
   const PRAISES = ['¡Muy bien!', '¡Genial!', '¡Lo hiciste!', '¡Bravo!', '¡Fantástico!', '¡Qué bien lo haces!', '¡Eres una campeona!'];
   const RETRY = ['Casi. Inténtalo otra vez.', 'Mmm, no. Prueba de nuevo.', 'Escucha otra vez.'];
 
-  return { VOWELS, CONSONANTS, LETTERS, WORDS, WORLDS, PRAISES, RETRY, syllablesFor, wordByText };
+  return { VOWELS, CONSONANTS, LETTERS, WORDS, WORLDS, PRAISES, RETRY, syllablesFor, wordByText, initialWords, syllableCountWords };
 })();
