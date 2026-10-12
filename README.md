@@ -168,3 +168,11 @@ tools/build-single.py genera dist/bosque-de-letras.html (un solo archivo)
 ## Base pedagógica
 
 El diseño sigue un informe de investigación propio (carpeta `reports/`, no incluida en el repositorio) que revisa la evidencia sobre método fonético frente a silábico y global en español, conciencia fonológica, grafomotricidad y trazado en pantalla, feedback y recompensas, dosis y tiempo de pantalla, reconocimiento de voz infantil y apps existentes (Letrilandia, Micho, Ludiletras, Leo con Grin, GraphoGame, Lalilo, Khan Kids, Duolingo ABC). Pendiente: audios grabados de fonemas (ver "Sonido de las letras") y audio por región (seseo, yeísmo).
+
+## Piloto con familias
+
+En `piloto/` están la guía para las familias, el protocolo para quien coordina, la hoja de registro y una propuesta de una página para entidades. La app incluye, en ajustes, una prueba de lectura de dos minutos que administra un adulto (10 letras, 10 sílabas, 5 palabras) y un botón que copia un informe anónimo de uso y resultados para enviarlo al coordinador. Nada sale del dispositivo si la familia no lo copia.
+
+## Propósito
+
+Este juego no tiene fin comercial y no lo tendrá: es gratuito, sin publicidad, sin cuentas y sin recogida de datos, con licencia CC BY-NC-SA para que nadie pueda cerrarlo ni venderlo. Si trabajas en una entidad educativa o de atención a dificultades de aprendizaje y quieres revisarlo, adaptarlo o pilotarlo, el material de `piloto/propuesta-entidad.md` resume qué pedimos y qué ofrecemos.

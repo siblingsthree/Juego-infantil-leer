@@ -296,3 +296,7 @@ button.word-target, .big-emoji { background: none; border: none; padding: 0; box
 .story { display: flex; flex-direction: column; align-items: center; gap: 16px; }
 .scene-big .emoji { font-size: clamp(4rem, 20vmin, 7.5rem); line-height: 1; letter-spacing: 10px; }
 .sentence-read { font-size: clamp(1.5rem, 5.5vw, 2.6rem); }
+
+/* ---- Piloto ---- */
+.pilot-item { text-align: center; font-size: clamp(3.5rem, 16vw, 7rem); line-height: 1.1; color: var(--ink); background: var(--bg); border-radius: var(--radius); padding: 16px; }
+.report-box { width: 100%; min-height: 160px; font: 13px/1.4 monospace; border-radius: 12px; border: 2px solid var(--border); background: var(--bg); color: var(--fg); padding: 8px; }

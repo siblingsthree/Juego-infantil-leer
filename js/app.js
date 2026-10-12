@@ -273,6 +273,13 @@ const App = (() => {
         <small>Marca como hechas las lecciones anteriores, para que un niño de 6 o 7 años no tenga que recorrerlo todo.</small>
       </div>
       <div class="field">
+        <label>Piloto: prueba de lectura</label>
+        <small>Prueba de dos minutos que hace un adulto con la niña, antes de empezar y al terminar el piloto: 10 letras, 10 sílabas y 5 palabras. ${Progress.load().tests.length ? `Pruebas guardadas: ${Progress.load().tests.length}.` : 'Aún no hay ninguna.'}</small>
+        <button class="btn ghost" id="pilot">📋 Hacer la prueba</button>
+        <button class="btn ghost" id="copyReport">📤 Copiar informe del piloto</button>
+        <textarea id="reportBox" class="report-box" hidden readonly></textarea>
+      </div>
+      <div class="field">
         <label>Fichas para imprimir</label>
         <small>Hojas A4 con pauta de 5 mm, mismo punto de inicio que el juego: <a href="fichas.html" target="_blank" rel="noopener">abrir fichas.html</a> (funciona en la versión web, no en el enlace de Claude).</small>
       </div>
@@ -308,6 +315,8 @@ const App = (() => {
     q('#freeMode').onchange = e => Settings.set({ freeMode: e.target.checked });
     q('#sessionMinutes').oninput = e => { Settings.set({ sessionMinutes: +e.target.value }); q('#sessionOut').value = +e.target.value || 'sin límite'; };
     if (q('#reopen')) q('#reopen').onclick = () => { Session.reopen(); closeModal(); home(); };
+    q('#pilot').onclick = () => pilotTest();
+    q('#copyReport').onclick = () => copyReport(q('#reportBox'));
     q('#startFrom').onchange = e => { if (e.target.value) { Progress.startFrom(e.target.value); q('.report').innerHTML = familyReport(); } };
     q('#soundFx').onchange = e => Settings.set({ soundFx: e.target.checked });
     q('#twoTap').onchange = e => Settings.set({ twoTap: e.target.checked });
@@ -317,6 +326,93 @@ const App = (() => {
       if (q('#reset').dataset.armed) { Progress.reset(); closeModal(); home(); return; }
       q('#reset').dataset.armed = '1'; q('#reset').textContent = '¿Seguro? Toca otra vez para borrar';
     };
+  }
+
+  /* ---------- Piloto: prueba de lectura administrada por un adulto ---------- */
+  const PILOT_ITEMS = [
+    { kind: 'letras', ask: 'Señala y pregunta: "¿Qué letra es? ¿Cómo suena?"', items: ['a', 'e', 'i', 'o', 'u', 'm', 'p', 's', 'l', 't'], show: l => `${l.toUpperCase()} ${l}` },
+    { kind: 'sílabas', ask: 'Señala y pregunta: "¿Qué dice aquí?"', items: ['ma', 'pe', 'si', 'lo', 'tu', 'sa', 'me', 'pi', 'no', 'da'], show: x => fmtText(x) },
+    { kind: 'palabras', ask: 'Señala y pregunta: "¿Qué dice aquí?"', items: ['mamá', 'pato', 'luna', 'sopa', 'moto'], show: x => fmtText(x) },
+  ];
+  function pilotTest() {
+    const prev = Progress.load().tests;
+    const kind = prev.length ? 'final' : 'inicial';
+    openModal(`
+      <h2>Prueba ${kind} de lectura</h2>
+      <p>La hace un adulto con la niña al lado. Pulsa ✅ si lo lee o lo dice bien, ❌ si no o si tarda más de 5 segundos. No se corrige ni se ayuda durante la prueba. Dura unos dos minutos.</p>
+      <p><b>Edad de la niña o niño:</b></p>
+      <div class="gate">${[4, 5, 6, 7].map(a => `<button class="btn ghost" data-age="${a}">${a} años</button>`).join('')}</div>
+      <button class="btn link" id="cancel">Cancelar</button>`);
+    modal.querySelector('#cancel').onclick = () => { closeModal(); settings(); };
+    modal.querySelectorAll('[data-age]').forEach(b => b.onclick = () => runPilot(kind, +b.dataset.age));
+  }
+  function runPilot(kind, age) {
+    const flat = PILOT_ITEMS.flatMap(g => g.items.map(it => ({ group: g, it })));
+    let i = 0; const result = {};
+    const step = () => {
+      if (i >= flat.length) return finishPilot(kind, age, result);
+      const { group, it } = flat[i];
+      openModal(`
+        <h2>${U.esc(group.kind)} · ${i + 1} / ${flat.length}</h2>
+        <p class="muted">${U.esc(group.ask)}</p>
+        <div class="pilot-item font-letters">${U.esc(group.show(it))}</div>
+        <div class="gate">
+          <button class="btn good big" id="yes">✅ Bien</button>
+          <button class="btn ghost big" id="no">❌ No</button>
+        </div>
+        <button class="btn link" id="cancel">Cancelar la prueba</button>`);
+      modal.querySelector('#cancel').onclick = () => { closeModal(); settings(); };
+      modal.querySelector('#yes').onclick = () => { result[it] = 1; i++; step(); };
+      modal.querySelector('#no').onclick = () => { result[it] = 0; i++; step(); };
+    };
+    step();
+  }
+  function finishPilot(kind, age, result) {
+    const scores = {};
+    for (const g of PILOT_ITEMS) scores[g.kind] = g.items.reduce((a, it) => a + (result[it] || 0), 0);
+    const test = { date: new Date().toISOString().slice(0, 10), kind, age, scores, detail: result };
+    Progress.addTest(test);
+    const tests = Progress.load().tests;
+    const first = tests[0];
+    openModal(`
+      <h2>Prueba ${kind} guardada</h2>
+      <ul>${PILOT_ITEMS.map(g => `<li><b>${U.esc(g.kind)}</b>: ${scores[g.kind]} de ${g.items.length}${tests.length > 1 && first !== test ? ` (inicial: ${first.scores[g.kind]})` : ''}</li>`).join('')}</ul>
+      <p class="muted">Fallos en: ${Object.entries(result).filter(([, v]) => !v).map(([k]) => k).join(', ') || 'ninguno'}</p>
+      <textarea id="reportBox" class="report-box" readonly></textarea>
+      <div class="actions"><button class="btn primary" id="copy">📤 Copiar informe</button><button class="btn ghost" id="close">Cerrar</button></div>`);
+    modal.querySelector('#copy').onclick = () => copyReport(modal.querySelector('#reportBox'));
+    modal.querySelector('#close').onclick = () => { closeModal(); settings(); };
+  }
+  /* Informe de texto para enviar al coordinador del piloto. Solo datos del juego, sin nombres. */
+  function pilotReportText() {
+    const d = Progress.load();
+    const days = d.sessions;
+    const lines = [];
+    lines.push('BOSQUE DE LETRAS · informe del piloto');
+    lines.push('Generado: ' + new Date().toISOString().slice(0, 16).replace('T', ' '));
+    lines.push('Dispositivo: ' + (navigator.userAgent.match(/\(([^)]+)\)/) || ['', '?'])[1]);
+    lines.push('Ajustes: letra=' + Settings.get().caseMode + ', doble toque=' + (Settings.get().twoTap ? 'sí' : 'no') + ', minutos/sesión=' + Settings.get().sessionMinutes);
+    lines.push('');
+    lines.push('PRUEBAS DE LECTURA');
+    if (!d.tests.length) lines.push('  (ninguna)');
+    for (const t of d.tests) lines.push(`  ${t.date} ${t.kind} · ${t.age} años · letras ${t.scores['letras']}/10 · sílabas ${t.scores['sílabas']}/10 · palabras ${t.scores['palabras']}/5 · fallos: ${Object.entries(t.detail).filter(([, v]) => !v).map(([k]) => k).join(' ') || '-'}`);
+    lines.push('');
+    lines.push('USO');
+    lines.push(`  Días con juego: ${days.length} · minutos totales: ${days.reduce((a, x) => a + x.minutes, 0)}`);
+    for (const x of days.slice(-30)) lines.push(`  ${x.day}: ${x.minutes} min`);
+    lines.push('');
+    lines.push('LECCIONES COMPLETADAS (id: veces, estrellas, última)');
+    for (const [id, l] of Object.entries(d.lessons)) lines.push(`  ${id}: ${l.plays}x, ${l.stars}★, ${new Date(l.last).toISOString().slice(0, 10)}`);
+    lines.push('');
+    lines.push('FALLOS POR LETRA O SÍLABA');
+    for (const [k, n] of Progress.hardest(15)) lines.push(`  ${k}: ${n}`);
+    return lines.join('\n');
+  }
+  async function copyReport(box) {
+    const text = pilotReportText();
+    box.hidden = false; box.value = text;
+    try { await navigator.clipboard.writeText(text); box.value = 'Copiado al portapapeles. Pégalo en un mensaje o correo.\n\n' + text; }
+    catch (e) { box.select(); }
   }
 
   /* Informe local para la familia: dominado, en curso, letras que más cuestan, minutos por día. */

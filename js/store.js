@@ -25,11 +25,12 @@ const Progress = (() => {
   function load() {
     if (data) return data;
     try { data = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { data = null; }
-    if (!data || typeof data !== 'object') data = { lessons: {}, stickers: [], misses: {}, sessions: [] };
+    if (!data || typeof data !== 'object') data = { lessons: {}, stickers: [], misses: {}, sessions: [], tests: [] };
     data.lessons = data.lessons || {};
     data.stickers = data.stickers || [];
     data.misses = data.misses || {};
     data.sessions = data.sessions || [];
+    data.tests = data.tests || [];
     return data;
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(load())); } catch (e) { /* sin almacenamiento */ } }
@@ -81,6 +82,7 @@ const Progress = (() => {
   }
   function knownLetters() { return [...DATA.VOWELS, ...knownConsonants()]; }
   function worldDone(world) { return world.lessons.filter(l => stars(l.id) > 0).length; }
-  function reset() { data = { lessons: {}, stickers: [], misses: {}, sessions: [] }; save(); }
-  return { load, stars, complete, miss, hardest, logSession, dueForReview, startFrom, isUnlocked, worldDone, reset, knownConsonants, knownLetters };
+  function reset() { data = { lessons: {}, stickers: [], misses: {}, sessions: [], tests: [] }; save(); }
+  function addTest(t) { const d = load(); d.tests.push(t); save(); }
+  return { load, stars, complete, miss, hardest, logSession, dueForReview, startFrom, isUnlocked, worldDone, reset, knownConsonants, knownLetters, addTest };
 })();
