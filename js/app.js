@@ -24,7 +24,7 @@ const App = (() => {
 
   /* ---------- Inicio ---------- */
   function home() {
-    runToken++; Voice.stop();
+    runToken++; Voice.stop(); Listen.stop();
     view = { name: 'home' };
     setTop({ title: 'Bosque de Letras', back: null });
     const total = DATA.WORLDS.reduce((a, w) => a + w.lessons.length, 0);
@@ -57,7 +57,7 @@ const App = (() => {
 
   /* ---------- Mundo: lista de lecciones ---------- */
   function world(id) {
-    runToken++; Voice.stop();
+    runToken++; Voice.stop(); Listen.stop();
     const w = DATA.WORLDS.find(x => x.id === id);
     view = { name: 'world', id };
     setTop({ title: `${w.emoji} ${w.title}`, back: home });
@@ -83,7 +83,7 @@ const App = (() => {
 
   /* ---------- Lección ---------- */
   async function lesson(w, idx) {
-    const token = ++runToken; Voice.stop();
+    const token = ++runToken; Voice.stop(); Listen.stop();
     const l = w.lessons[idx];
     view = { name: 'lesson', world: w.id, idx };
     const steps = buildSteps(l);
@@ -149,7 +149,7 @@ const App = (() => {
 
   /* ---------- Álbum de pegatinas ---------- */
   function album() {
-    runToken++; Voice.stop();
+    runToken++; Voice.stop(); Listen.stop();
     view = { name: 'album' };
     setTop({ title: '🏆 Mi álbum', back: home });
     const have = Progress.load().stickers;
@@ -203,6 +203,10 @@ const App = (() => {
           ${voices.length ? voices.map(v => `<option value="${U.esc(v.voiceURI)}" ${cur && v.voiceURI === cur.voiceURI ? 'selected' : ''}>${U.esc(v.name)} (${U.esc(v.lang)})</option>`).join('') : '<option>No hay voces en español en este dispositivo</option>'}
         </select>
         <small>${Voice.supported ? 'Las voces las pone el navegador. En Chrome, Edge y Safari (iPad) suele haber voz en español.' : 'Este navegador no tiene síntesis de voz. Prueba con Chrome, Edge o Safari.'}</small>
+      </div>
+      <div class="field">
+        <label>Micrófono (actividad "Dilo tú")</label>
+        <small>${Listen.supported ? 'Este navegador puede escuchar. La primera vez pedirá permiso para el micrófono; en Chrome y Edge necesita conexión a internet.' : 'Este navegador no reconoce voz. En esa actividad aparece el botón "Ya lo dije" para que confirmes tú.'}</small>
       </div>
       <div class="field">
         <label for="rate">Velocidad de la voz: <output id="rateOut">${s.rate}</output></label>

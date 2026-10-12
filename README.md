@@ -32,6 +32,8 @@ Cada lección encadena actividades cortas y termina con estrellas y una pegatina
 | Escribe | Escribe sin guía; hay botón de pista | Grafía sin apoyo |
 | Arma la palabra | Ve el dibujo, oye la palabra y ordena sus sílabas | Síntesis silábica |
 | Lee | Ve la palabra escrita (sin audio) y toca su dibujo | Lectura real |
+| Dilo tú | Ve "P + A = ?", oye "¿la pe con la a?" y lo dice al micrófono | Lectura en voz alta de sílabas |
+| Lee en voz alta | Ve la palabra con su dibujo y la lee al micrófono | Lectura en voz alta de palabras |
 
 Detalles que importan a esta edad:
 
@@ -49,6 +51,29 @@ La letra guía se pinta en un lienzo oculto. Al pulsar "Listo" se miden dos cosa
 - **Precisión**: qué parte de la pintura cae dentro de la letra ampliada con un margen de tolerancia.
 
 Con guía se exige 72 % de cobertura y 55 % de precisión; sin guía, 62 % y 50 %. Los umbrales están en `js/tracing.js` (`evaluate`). Se puede ajustar si resulta demasiado fácil o difícil.
+
+## Voz: síntesis y reconocimiento
+
+**Síntesis (el juego habla)**: Web Speech API, `speechSynthesis`. Usa las voces en español que tenga el dispositivo; en los ajustes se elige voz y velocidad.
+
+**Reconocimiento (el juego escucha)**: Web Speech API, `SpeechRecognition`. Lo usan las actividades "Dilo tú" y "Lee en voz alta".
+
+| Navegador | Habla | Escucha |
+|---|---|---|
+| Chrome / Edge (Android, Windows, Mac) | sí | sí, con conexión a internet (el audio se procesa en servidores de Google o Microsoft) |
+| Safari (iPad, iPhone, Mac) | sí | sí, con Siri y Dictado activados |
+| Firefox | sí | no |
+
+Cómo se decide que lo dijo bien (`js/audio.js`, `Listen.matches`):
+
+- Se comparan hasta cinco alternativas que devuelve el reconocedor, sin tildes ni mayúsculas.
+- Se igualan pronunciaciones del español: b/v, ll/y, z/s, c/k, ce/se, ge/je, h muda, qu/k.
+- Sílabas: vale si lo oído empieza por la sílaba. Un reconocedor adulto suele convertir "pa" en "papá" o "para", y eso cuenta como acierto.
+- Palabras: exacta, o con un solo error que no sea la primera letra. "Gato" por "pato" es fallo.
+
+El reconocimiento nunca bloquea: si falla una vez aparece "Ya lo dije" para que un adulto confirme, y a la segunda aparece "Siguiente". Sin micrófono, sin permiso o sin conexión aparece el mismo botón. Un reconocedor de habla adulta entiende mal a un niño de 5 años con una sílaba suelta; la tolerancia está pensada para eso, y "Ya lo dije" no suma estrella.
+
+El micrófono solo funciona en páginas servidas por HTTPS o en `localhost`. En la versión publicada como artefacto de Claude no está disponible; sí en GitHub Pages.
 
 ## Ajustes para madres y padres
 
@@ -85,7 +110,12 @@ tools/build-single.py genera dist/bosque-de-letras.html (un solo archivo)
 
 ## Limitaciones conocidas y siguientes pasos
 
+- El reconocimiento de voz no funciona sin conexión en Chrome y Edge, ni en Firefox.
 - La voz depende del dispositivo. Sin voz en español el juego funciona, pero en silencio. Un siguiente paso natural es grabar audios propios (o generarlos con un servicio de voz) y guardarlos en `audio/`.
 - La síntesis de voz dice el **nombre** de la consonante ("eme"), no su sonido aislado. Por eso el juego apoya siempre en las sílabas, que sí suenan bien.
 - El trazo se corrige por forma, no por orden de los trazos. Añadir flechas de dirección por letra sería la siguiente mejora de escritura.
 - Para añadir palabras: una línea en `js/data.js` con sílabas, emoji y nivel, y añadirla a una lección.
+
+## Licencia
+
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.es): se puede copiar, compartir y adaptar con atribución, **sin uso comercial** y manteniendo la misma licencia. Ver `LICENSE`.

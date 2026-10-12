@@ -77,3 +77,78 @@ const Sfx = (() => {
   }
   return { play };
 })();
+
+/* Reconocimiento de voz (Web Speech API). Funciona en Chrome, Edge y Safari (iOS 14.5+);
+   Chrome y Edge envían el audio a sus servidores, así que necesita conexión.
+   Devuelve siempre un objeto { status, alternatives }, nunca lanza. */
+const Listen = (() => {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const supported = !!SR;
+  let active = null;
+
+  function stop() { if (active) { try { active.abort(); } catch (e) { /* nada */ } active = null; } }
+
+  function listen({ lang = 'es-ES', timeout = 7000, onInterim = () => {} } = {}) {
+    return new Promise(resolve => {
+      if (!supported) return resolve({ status: 'unsupported', alternatives: [] });
+      stop();
+      Voice.stop();
+      let rec;
+      try { rec = new SR(); } catch (e) { return resolve({ status: 'error', alternatives: [] }); }
+      active = rec;
+      rec.lang = lang; rec.interimResults = true; rec.maxAlternatives = 5; rec.continuous = false;
+      let finals = [], interim = '', settled = false;
+      const finish = (status) => {
+        if (settled) return; settled = true;
+        clearTimeout(timer); active = null;
+        const alts = finals.length ? finals : (interim ? [interim] : []);
+        resolve({ status: alts.length ? 'result' : status, alternatives: alts });
+      };
+      const timer = setTimeout(() => { try { rec.stop(); } catch (e) { /* nada */ } setTimeout(() => finish('nospeech'), 1500); }, timeout);
+      rec.onresult = e => {
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const r = e.results[i];
+          if (r.isFinal) { for (let j = 0; j < r.length; j++) finals.push(r[j].transcript); }
+          else { interim = r[0].transcript; onInterim(interim); }
+        }
+      };
+      rec.onerror = e => {
+        const code = (e && e.error) || 'error';
+        finish(code === 'not-allowed' || code === 'service-not-allowed' ? 'denied' : code === 'no-speech' ? 'nospeech' : code === 'network' ? 'network' : 'error');
+      };
+      rec.onend = () => finish('nospeech');
+      try { rec.start(); } catch (e) { finish('error'); }
+    });
+  }
+
+  /* Normaliza para comparar lo oído con lo esperado: sin tildes, sin signos, y con las
+     equivalencias de pronunciación del español (b/v, ll/y, z/s, c/k, ce/se, ge/je, h muda). */
+  function canon(s) {
+    let t = String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    t = t.replace(/ñ/g, 'ni').replace(/[^a-z]/g, '');
+    t = t.replace(/qu/g, 'k').replace(/c([ei])/g, 's$1').replace(/c/g, 'k').replace(/z/g, 's')
+      .replace(/g([ei])/g, 'j$1').replace(/gu([ei])/g, 'g$1').replace(/v/g, 'b').replace(/ll/g, 'y')
+      .replace(/h/g, '').replace(/w/g, 'u');
+    return t;
+  }
+  function distance(a, b) {
+    const m = a.length, n = b.length; const d = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+    for (let j = 1; j <= n; j++) d[0][j] = j;
+    for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return d[m][n];
+  }
+  /* ¿Alguna alternativa oída vale como el objetivo? Para sílabas basta con que lo oído empiece
+     por la sílaba (un reconocedor suele completar "pa" como "papá" o "para"). */
+  function matches(alternatives, target, { kind = 'syllable' } = {}) {
+    const t = canon(target);
+    if (!t) return false;
+    return alternatives.some(a => {
+      const words = String(a).toLowerCase().split(/\s+/).map(canon).filter(Boolean);
+      const whole = canon(a);
+      if (kind === 'syllable') return whole === t || words.some(w => w === t || w.startsWith(t)) || whole.startsWith(t);
+      // Palabras: exacta, o con un solo error que no sea la primera letra (cambiar "pato" por "gato" sí es fallo).
+      return whole === t || words.includes(t) || (t.length >= 5 && words.some(w => w[0] === t[0] && distance(w, t) <= 1));
+    });
+  }
+  return { supported, listen, stop, canon, matches };
+})();

@@ -311,6 +311,7 @@ function buildSteps(lesson) {
       ...cases.map(k => ({ name: 'Traza', run: traceLetter(c, k, true) })),
       { name: 'Sílabas', run: A.pickSyllable(syls, syls, 3) },
       { name: 'Forma', run: A.buildSyllable([c], 3) },
+      { name: 'Dilo tú', run: A.saySyllable(c, U.pick(DATA.LETTERS[c].vowels || DATA.VOWELS)) },
       { name: 'Traza', run: A.trace(syls[0], { guide: true }) },
       { name: 'Escribe', run: A.trace(U.pick(syls), { guide: false }) },
     ];
@@ -321,6 +322,7 @@ function buildSteps(lesson) {
       { name: 'Escucha y toca', run: A.pickSyllable(syls, syls, 5) },
       { name: 'Forma', run: A.buildSyllable(lesson.consonants, 4) },
       { name: 'Traza', run: A.trace(U.pick(syls), { guide: true }) },
+      { name: 'Dilo tú', run: (() => { const c = U.pick(lesson.consonants); return A.saySyllable(c, U.pick(DATA.LETTERS[c].vowels || DATA.VOWELS)); })() },
       { name: 'Escucha y toca', run: A.pickSyllable(syls, syls, 3) },
       { name: 'Escribe', run: A.trace(U.pick(syls), { guide: false }) },
     ];
@@ -334,8 +336,116 @@ function buildSteps(lesson) {
       { name: 'Arma', run: A.buildWord(w(2), lesson.words) },
       { name: 'Traza', run: A.trace(w(3).w, { guide: true }) },
       { name: 'Lee', run: A.readWord(w(4), lesson.words) },
+      { name: 'Lee en voz alta', run: A.sayWord(w(1)) },
       { name: 'Escribe', run: A.trace(w(5).w, { guide: false }) },
     ];
   }
   return [];
 }
+
+/* 7. Dilo tú: la niña pronuncia la sílaba o la palabra y el micrófono la reconoce.
+   Nunca bloquea: tras un intento fallido (o si no hay micrófono) aparece "Ya lo dije". */
+function speakActivity({ kind, target, display, promptText, promptSpoken, modelSpoken, rounds = 1 }) {
+  return async (root, api) => {
+    root.innerHTML = `
+      ${promptHTML(promptText)}
+      <div class="say">
+        ${display}
+        <button class="mic-btn" id="mic" aria-label="Hablar"><span class="mic-icon">🎤</span><span class="mic-label">Dilo tú</span></button>
+        <p class="heard" id="heard" aria-live="polite"></p>
+      </div>
+      <div class="actions" id="say-actions"></div>`;
+    const mic = root.querySelector('#mic');
+    const heard = root.querySelector('#heard');
+    const actions = root.querySelector('#say-actions');
+    root.querySelector('#sp').onclick = () => api.say(promptSpoken);
+    const targetBtn = root.querySelector('[data-say]');
+    if (targetBtn) targetBtn.onclick = () => { api.sfx('tap'); api.say(targetBtn.dataset.say); };
+    api.say(promptSpoken);
+
+    let attempts = 0, first = true, done = false, busy = false, selfBtn = null, skipBtn = null;
+    const addSelf = () => {
+      if (selfBtn) return;
+      selfBtn = document.createElement('button');
+      selfBtn.className = 'btn ghost'; selfBtn.textContent = '✔ Ya lo dije';
+      actions.appendChild(selfBtn);
+    };
+    const addSkip = () => {
+      if (skipBtn) return;
+      skipBtn = document.createElement('button');
+      skipBtn.className = 'btn ghost'; skipBtn.textContent = 'Siguiente ➜';
+      actions.appendChild(skipBtn);
+    };
+    if (!Listen.supported) {
+      heard.textContent = 'Este navegador no escucha. Dilo en voz alta y toca "Ya lo dije".';
+      addSelf();
+    }
+
+    const ok = await new Promise(resolve => {
+      mic.onclick = async () => {
+        if (done || busy) return;
+        busy = true; mic.classList.add('listening'); mic.querySelector('.mic-label').textContent = 'Te escucho…';
+        heard.textContent = '';
+        api.sfx('pop');
+        const res = await Listen.listen({ onInterim: t => { heard.textContent = `Oigo: «${t}»`; } });
+        mic.classList.remove('listening'); mic.querySelector('.mic-label').textContent = 'Dilo tú'; busy = false;
+        if (done) return;
+        if (res.status === 'result') {
+          const hit = Listen.matches(res.alternatives, target, { kind });
+          heard.textContent = `He oído: «${res.alternatives[0].trim()}»`;
+          if (hit) {
+            done = true; mic.classList.add('correct'); api.sfx('ok');
+            await api.praise();
+            return resolve(first);
+          }
+          attempts++; first = false; api.sfx('no');
+          mic.classList.add('wrong'); setTimeout(() => mic.classList.remove('wrong'), 700);
+          api.say(`He oído ${res.alternatives[0]}. Vamos a decirlo juntos: ${modelSpoken}. Ahora tú.`);
+        } else if (res.status === 'denied') {
+          heard.textContent = 'No tengo permiso para usar el micrófono. Dilo en voz alta y toca "Ya lo dije".';
+          api.say('No puedo usar el micrófono. Dilo en voz alta y toca: ya lo dije.');
+          addSelf();
+        } else if (res.status === 'network') {
+          heard.textContent = 'Para escuchar hace falta conexión a internet.';
+          addSelf();
+        } else {
+          attempts++;
+          heard.textContent = 'No te he oído. Acércate y dilo más fuerte.';
+          api.say(`No te he oído. Dilo más fuerte: ${modelSpoken}.`);
+        }
+        if (attempts >= 1) addSelf();
+        if (attempts >= 2) addSkip();
+        if (selfBtn) selfBtn.onclick = () => { if (done) return; done = true; api.sfx('ok'); api.say(modelSpoken); resolve(false); };
+        if (skipBtn) skipBtn.onclick = () => { if (done) return; done = true; resolve(false); };
+      };
+      if (selfBtn) selfBtn.onclick = () => { if (done) return; done = true; api.sfx('ok'); api.say(modelSpoken); resolve(false); };
+    });
+    return { hits: ok ? 1 : 0, total: 1 };
+  };
+}
+
+A.saySyllable = (c, v) => {
+  const syl = c + v;
+  return speakActivity({
+    kind: 'syllable', target: syl,
+    display: `<div class="equation font-letters">
+        <span class="eq-letter cons">${U.esc(fmtText(c))}</span><span class="eq-op">+</span>
+        <span class="eq-letter vow">${U.esc(fmtText(v))}</span><span class="eq-op">=</span>
+        <button class="eq-result" data-say="${U.esc(syl)}" aria-label="Oír ${U.esc(syl)}">?</button>
+      </div>`,
+    promptText: `¿La <b>${U.esc(letterName(c))}</b> con la <b>${U.esc(v)}</b>? Dilo en voz alta`,
+    promptSpoken: `¿La ${letterName(c)} con la ${v}? ¿Qué dice? Toca el micrófono y dilo en voz alta.`,
+    modelSpoken: syl,
+  });
+};
+
+A.sayWord = word => speakActivity({
+  kind: 'word', target: word.w,
+  display: `<div class="say-word">
+      <span class="emoji">${word.e}</span>
+      <button class="read-word font-letters" data-say="${U.esc(word.w)}">${U.esc(fmtText(word.w))}</button>
+    </div>`,
+  promptText: 'Lee la palabra en voz alta',
+  promptSpoken: 'Lee la palabra en voz alta. Toca el micrófono y dila.',
+  modelSpoken: word.s.join(', ') + '. ' + word.w,
+});

@@ -194,3 +194,24 @@ details.danger p { color: var(--muted); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---- Dilo tú (micrófono) ---- */
+.say { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.equation { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.eq-letter { min-width: 84px; height: 84px; padding: 0 16px; display: grid; place-items: center; font-size: 2.8rem; border-radius: 18px; background: var(--surface); border: 4px solid var(--border); box-shadow: var(--shadow); }
+.eq-letter.cons { border-color: var(--accent); }
+.eq-letter.vow { border-color: var(--sky); }
+.eq-op { font-size: 2.4rem; font-weight: 900; color: var(--muted); }
+.eq-result { min-width: 110px; height: 84px; padding: 0 16px; font-size: 2.8rem; border-radius: 18px; background: var(--surface); border: 4px dashed var(--muted); color: var(--muted); font-family: var(--font-letters); font-weight: 700; }
+.say-word { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.say-word .emoji { font-size: clamp(3rem, 14vmin, 5rem); line-height: 1; }
+.say-word .read-word { font-size: clamp(2.4rem, 10vw, 4.5rem); }
+.mic-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 150px; height: 150px; border-radius: 50%; border: 5px solid var(--sky); background: var(--surface); box-shadow: var(--shadow); position: relative; }
+.mic-btn .mic-icon { font-size: 3.4rem; line-height: 1; }
+.mic-btn .mic-label { font-weight: 900; font-size: 1rem; }
+.mic-btn:active { transform: translateY(3px); box-shadow: none; }
+.mic-btn.listening { border-color: var(--bad); animation: listen 1.1s ease-in-out infinite; }
+.mic-btn.listening::after { content: ''; position: absolute; inset: -14px; border-radius: 50%; border: 4px solid var(--bad); opacity: .6; animation: ring 1.1s ease-out infinite; }
+@keyframes listen { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+@keyframes ring { from { transform: scale(.9); opacity: .7; } to { transform: scale(1.25); opacity: 0; } }
+.heard { margin: 0; min-height: 1.5em; text-align: center; color: var(--muted); font-weight: 700; max-width: 36ch; text-wrap: balance; }
