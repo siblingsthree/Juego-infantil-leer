@@ -446,8 +446,8 @@ function speakActivity({ kind, target, display, promptText, promptSpoken, modelS
       skipBtn.className = 'btn ghost'; skipBtn.dataset.say = 'Siguiente'; skipBtn.innerHTML = '<span class="ico">➡️</span>Siguiente';
       actions.appendChild(skipBtn);
     };
-    if (!Listen.supported) {
-      heard.textContent = 'Este navegador no escucha. Dilo en voz alta y toca "Ya lo dije".';
+    if (!Listen.supported || window.top !== window.self) {
+      heard.textContent = Listen.platformHint('unsupported') + ' Dilo en voz alta y toca "Ya lo dije".';
       addSelf();
     }
 
@@ -471,16 +471,13 @@ function speakActivity({ kind, target, display, promptText, promptSpoken, modelS
           attempts++; first = false; api.sfx('no');
           mic.classList.add('wrong'); setTimeout(() => mic.classList.remove('wrong'), 700);
           api.say(`He oído ${res.alternatives[0]}. Vamos a decirlo juntos: ${modelSpoken}. Ahora tú.`);
-        } else if (res.status === 'denied') {
-          heard.textContent = 'No tengo permiso para usar el micrófono. Dilo en voz alta y toca "Ya lo dije".';
+        } else if (res.status === 'denied' || res.status === 'nomic' || res.status === 'network' || res.status === 'error') {
+          heard.textContent = 'El micrófono no funciona aquí. ' + Listen.platformHint(res.status) + ' Mientras tanto, dilo en voz alta y toca "Ya lo dije".';
           api.say('No puedo usar el micrófono. Dilo en voz alta y toca: ya lo dije.');
-          addSelf();
-        } else if (res.status === 'network') {
-          heard.textContent = 'Para escuchar hace falta conexión a internet.';
           addSelf();
         } else {
           attempts++;
-          heard.textContent = 'No te he oído. Acércate y dilo más fuerte.';
+          heard.textContent = 'No te he oído. ' + (attempts >= 2 ? Listen.platformHint('nospeech') : 'Acércate y dilo más fuerte.');
           api.say(`No te he oído. Dilo más fuerte: ${modelSpoken}.`);
         }
         if (attempts >= 1) addSelf();

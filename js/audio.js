@@ -102,7 +102,7 @@ const Listen = (() => {
 
   function stop() { if (active) { try { active.abort(); } catch (e) { /* nada */ } active = null; } }
 
-  function listen({ lang = 'es-ES', timeout = 7000, onInterim = () => {} } = {}) {
+  let listen = function ({ lang = 'es-ES', timeout = 7000, onInterim = () => {} } = {}) {
     return new Promise(resolve => {
       if (!supported) return resolve({ status: 'unsupported', alternatives: [] });
       stop();
@@ -128,12 +128,35 @@ const Listen = (() => {
       };
       rec.onerror = e => {
         const code = (e && e.error) || 'error';
-        finish(code === 'not-allowed' || code === 'service-not-allowed' ? 'denied' : code === 'no-speech' ? 'nospeech' : code === 'network' ? 'network' : 'error');
+        last.error = code;
+        finish(code === 'not-allowed' || code === 'service-not-allowed' ? 'denied' : code === 'no-speech' ? 'nospeech' : code === 'network' ? 'network' : code === 'audio-capture' ? 'nomic' : 'error');
       };
+      rec.onstart = () => { last.started = true; };
       rec.onend = () => finish('nospeech');
-      try { rec.start(); } catch (e) { finish('error'); }
+      try { rec.start(); } catch (e) { last.error = String(e && e.message || e); finish('error'); }
     });
   }
+  /* Último intento, para la prueba de micrófono de los ajustes. */
+  const last = { status: null, error: null, started: false, alternatives: [] };
+  function platformHint(status) {
+    const ua = navigator.userAgent;
+    const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    const inFrame = window.top !== window.self;
+    if (inFrame) return 'La página está dentro de otra (por ejemplo el enlace de Claude): ahí el micrófono está bloqueado. Abre la dirección de github.io directamente.';
+    if (!supported) return ios ? 'Este navegador no reconoce voz. En iPhone o iPad usa Safari.' : 'Este navegador no reconoce voz. Usa Chrome, Edge o Safari.';
+    if (status === 'denied') return ios
+      ? 'Safari no tiene permiso. En el iPhone: Ajustes → Safari → Micrófono → Permitir; y Ajustes → General → Teclado → Activar dictado. Si lo abriste desde el icono de pantalla de inicio, prueba primero en Safari normal.'
+      : 'El navegador no tiene permiso de micrófono. Toca el candado o el icono junto a la dirección → Permisos → Micrófono → Permitir.';
+    if (status === 'nomic') return 'No se encuentra ningún micrófono. Comprueba que otra app no lo esté usando.';
+    if (status === 'network') return 'El reconocimiento necesita conexión a internet (Chrome y Edge envían el audio a sus servidores).';
+    if (status === 'nospeech') return (ios && standalone)
+      ? 'No se oyó nada. En iPhone, abierto desde el icono de pantalla de inicio, el reconocimiento a veces no arranca: prueba en Safari normal.'
+      : 'No se oyó nada en 7 segundos. Habla fuerte y cerca; el permiso debería haberse pedido la primera vez.';
+    return '';
+  }
+  const _listen = listen;
+  listen = async function (opts) { last.status = null; last.error = null; last.started = false; const r = await _listen(opts); last.status = r.status; last.alternatives = r.alternatives; return r; };
 
   /* Normaliza para comparar lo oído con lo esperado: sin tildes, sin signos, y con las
      equivalencias de pronunciación del español (b/v, ll/y, z/s, c/k, ce/se, ge/je, h muda). */
@@ -169,5 +192,5 @@ const Listen = (() => {
       return whole === t || words.includes(t) || (t.length >= 5 && words.some(w => w[0] === t[0] && distance(w, t) <= 1));
     });
   }
-  return { supported, listen, stop, canon, matches };
+  return { supported, listen: (...a) => listen(...a), stop, canon, matches, last, platformHint };
 })();

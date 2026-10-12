@@ -252,8 +252,10 @@ const App = (() => {
         <small>${Voice.supported ? 'Las voces las pone el navegador. En Chrome, Edge y Safari (iPad) suele haber voz en español.' : 'Este navegador no tiene síntesis de voz. Prueba con Chrome, Edge o Safari.'}</small>
       </div>
       <div class="field">
-        <label>Micrófono (actividad "Dilo tú")</label>
-        <small>${Listen.supported ? 'Este navegador puede escuchar. La primera vez pedirá permiso para el micrófono; en Chrome y Edge necesita conexión a internet.' : 'Este navegador no reconoce voz. En esa actividad aparece el botón "Ya lo dije" para que confirmes tú.'}</small>
+        <label>Micrófono (actividades "Dilo tú" y "Lee en voz alta")</label>
+        <small>${Listen.supported ? 'Este navegador puede escuchar. La primera vez pedirá permiso; en Chrome y Edge necesita conexión a internet.' : 'Este navegador no reconoce voz. En esas actividades aparece el botón "Ya lo dije" para que confirmes tú.'}</small>
+        <button class="btn ghost" id="micTest">🎤 Probar micrófono (di "pato")</button>
+        <small id="micResult"></small>
       </div>
       <div class="field">
         <label for="rate">Velocidad de la voz: <output id="rateOut">${s.rate}</output></label>
@@ -327,6 +329,14 @@ const App = (() => {
     q('#soundFx').onchange = e => Settings.set({ soundFx: e.target.checked });
     q('#twoTap').onchange = e => Settings.set({ twoTap: e.target.checked });
     q('#test').onclick = () => Voice.say('Hola. Vamos a jugar con las letras: ma, me, mi, mo, mu.');
+    q('#micTest').onclick = async () => {
+      const out = q('#micResult');
+      out.textContent = 'Escuchando 7 segundos… di "pato".';
+      const r = await Listen.listen({ onInterim: t => { out.textContent = 'Oigo: ' + t; } });
+      const ua = navigator.userAgent.match(/\(([^)]+)\)/);
+      const info = `Estado: ${r.status}${Listen.last.error ? ' (' + Listen.last.error + ')' : ''} · arrancó: ${Listen.last.started ? 'sí' : 'no'} · oído: ${r.alternatives.length ? '«' + r.alternatives.join(' / ') + '»' : 'nada'} · ${ua ? ua[1] : ''}${window.top !== window.self ? ' · dentro de otra página' : ''}`;
+      out.textContent = info + (r.status === 'result' ? (Listen.matches(r.alternatives, 'pato', { kind: 'word' }) ? ' · ✅ reconoce "pato"' : ' · ❌ no coincide con "pato"') : ' · ' + Listen.platformHint(r.status));
+    };
     q('#close').onclick = () => { closeModal(); refresh(); };
     q('#reset').onclick = () => {
       if (q('#reset').dataset.armed) { Progress.reset(); closeModal(); home(); return; }
