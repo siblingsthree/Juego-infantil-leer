@@ -103,7 +103,10 @@ const App = (() => {
         // Confeti solo a veces, para que no sea previsible (Deci 1999: la recompensa esperada desmotiva).
         if (Math.random() < 0.4) Confetti.burst(50);
         // Se espera a que la voz termine (con tope), porque la siguiente pantalla cancela lo que esté sonando.
-        await Promise.race([Voice.say(text || U.pick(DATA.PRAISES)), U.wait(6000)]);
+        const t = text || U.pick(DATA.PRAISES);
+        const estimate = Math.min(7000, 500 + t.length * 80 / (Settings.get().rate || 0.9));
+        // Algunos navegadores avisan del final antes de tiempo o no avisan: se espera lo que dure según su longitud.
+        await Promise.race([Promise.all([Voice.say(t), U.wait(estimate)]), U.wait(8000)]);
         await U.wait(300);
       },
     };
@@ -310,6 +313,7 @@ const App = (() => {
         <button class="btn ghost" id="test">🔊 Probar voz</button>
         <button class="btn primary" id="close">Guardar y cerrar</button>
       </div>
+      <p class="muted">Versión ${DATA.VERSION} · ${location.hostname || 'archivo local'}${navigator.serviceWorker && navigator.serviceWorker.controller ? ' · sin conexión disponible' : ''}</p>
       <details class="danger">
         <summary>Reiniciar progreso</summary>
         <p>Se borran las estrellas y las pegatinas de este dispositivo.</p>
@@ -404,7 +408,7 @@ const App = (() => {
     const d = Progress.load();
     const days = d.sessions;
     const lines = [];
-    lines.push('BOSQUE DE LETRAS · informe del piloto');
+    lines.push('BOSQUE DE LETRAS · informe del piloto · versión ' + DATA.VERSION);
     lines.push('Generado: ' + new Date().toISOString().slice(0, 16).replace('T', ' '));
     lines.push('Dispositivo: ' + (navigator.userAgent.match(/\(([^)]+)\)/) || ['', '?'])[1]);
     lines.push('Ajustes: letra=' + Settings.get().caseMode + ', doble toque=' + (Settings.get().twoTap ? 'sí' : 'no') + ', minutos/sesión=' + Settings.get().sessionMinutes);

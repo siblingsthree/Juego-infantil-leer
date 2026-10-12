@@ -3,6 +3,7 @@
    Orden de consonantes según el método silábico habitual en español:
    primero las de trazo y sonido más sencillos (m, p, s, l, t, n, d). */
 const DATA = (() => {
+  const VERSION = '2026-10-12.11';
   const VOWELS = ['a', 'e', 'i', 'o', 'u'];
   const CONSONANTS = ['m', 'p', 's', 'l', 't', 'n', 'd', 'f', 'r', 'b', 'c', 'g', 'v', 'z', 'ñ', 'j', 'y', 'h', 'qu', 'ch', 'll'];
   // Consonantes continuas (se pueden alargar: mmm, sss): más fáciles para oír el sonido inicial.
@@ -274,5 +275,5 @@ const DATA = (() => {
     game: () => 'Jugad al "veo veo" con sonidos: "veo veo una cosa que empieza por sss".',
   };
 
-  return { VOWELS, CONSONANTS, CONTINUOUS, LETTERS, WORDS, WORLDS, SENTENCES, STORIES, INVERSE, BLENDS_L, BLENDS_R, PRAISES, PRAISES_RETRY, RETRY, FAMILY_TIPS, syllablesFor, wordByText, initialWords, syllableCountWords };
+  return { VERSION, VOWELS, CONSONANTS, CONTINUOUS, LETTERS, WORDS, WORLDS, SENTENCES, STORIES, INVERSE, BLENDS_L, BLENDS_R, PRAISES, PRAISES_RETRY, RETRY, FAMILY_TIPS, syllablesFor, wordByText, initialWords, syllableCountWords };
 })();
