@@ -1,7 +1,7 @@
 /* Service worker: primero la red (así las actualizaciones llegan en la siguiente carga);
    la caché solo se usa sin conexión. */
-const CACHE = 'bosque-letras-v5';
-const ASSETS = ['./', 'index.html', 'css/style.css', 'js/data.js', 'js/store.js', 'js/audio.js', 'js/strokes.js', 'js/tracing.js', 'js/confetti.js', 'js/twotap.js', 'js/activities.js', 'js/app.js', 'icon.svg', 'manifest.webmanifest', 'fichas.html'];
+const CACHE = 'bosque-letras-v6';
+const ASSETS = ['./', 'index.html', 'css/style.css', 'js/data.js', 'js/store.js', 'js/audio.js', 'js/strokes.js', 'js/tracing.js', 'js/icons.js', 'js/confetti.js', 'js/twotap.js', 'js/activities.js', 'js/app.js', 'icon.svg', 'manifest.webmanifest', 'fichas.html'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(() => {}).then(() => self.skipWaiting()));
 });

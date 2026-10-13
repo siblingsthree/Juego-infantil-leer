@@ -47,7 +47,7 @@ const App = (() => {
             </button>`).join('')}
         </div>
         <div class="home-foot">
-          <button class="btn ghost" id="album" data-say="Mi álbum de pegatinas"><span class="ico">🏆</span>Mi álbum (${Progress.load().stickers.length})</button>
+          <button class="btn nav" id="album" data-say="Mi álbum de pegatinas">${ico('trophy')}Mi álbum (${Progress.load().stickers.length})</button>
           <span class="muted">${done} de ${total} lecciones</span>
         </div>
       </section>`;
@@ -155,9 +155,9 @@ const App = (() => {
         <div class="family-tip"><span class="emoji">👨‍👩‍👧</span><div><b>Para hacer juntos, sin pantalla:</b><br>${U.esc(tip)}</div></div>
         ${closing ? `<p class="muted">Llevamos ${Session.minutes()} minutos. Para seguir, un adulto puede abrirlo en ⚙️ Ajustes.</p>` : ''}
         <div class="actions column">
-          ${closing ? '<button class="btn primary big" id="home" data-say="Hasta mañana"><span class="ico">🌙</span>Hasta mañana</button>' : next ? `<button class="btn primary big" id="next" data-say="Siguiente lección"><span class="ico">➡️</span>Siguiente: ${U.esc(next.title)}</button>` : '<button class="btn primary big" id="home" data-say="Volver al bosque"><span class="ico">🏡</span>Volver al bosque</button>'}
-          ${closing ? '' : '<button class="btn ghost" id="again" data-say="Jugar otra vez"><span class="ico">🔁</span>Otra vez</button>'}
-          ${closing ? '' : '<button class="btn ghost" id="list" data-say="Ver las lecciones"><span class="ico">📋</span>Lecciones</button>'}
+          ${closing ? `<button class="btn nav big" id="home" data-say="Hasta mañana">${ico('moon')}Hasta mañana</button>` : next ? `<button class="btn go big" id="next" data-say="Siguiente lección">Siguiente: ${U.esc(next.title)}${ico('next')}</button>` : `<button class="btn go big" id="home" data-say="Volver al bosque">${ico('home')}Volver al bosque</button>`}
+          ${closing ? '' : `<button class="btn nav" id="again" data-say="Jugar otra vez">${ico('replay')}Otra vez</button>`}
+          ${closing ? '' : `<button class="btn nav" id="list" data-say="Ver las lecciones">${ico('list')}Lecciones</button>`}
         </div>
       </section>`;
     const q = s => screen.querySelector(s);
@@ -171,7 +171,9 @@ const App = (() => {
   const Session = (() => {
     let startedAt = 0, closed = false, lastLog = 0;
     function start() {
-    document.getElementById('version').textContent = 'v ' + DATA.VERSION; if (!startedAt) { startedAt = Date.now(); lastLog = startedAt; } }
+    document.getElementById('version').textContent = 'v ' + DATA.VERSION;
+    backBtn.innerHTML = ICONS.raw('back');
+    settingsBtn.innerHTML = ICONS.raw('gear'); if (!startedAt) { startedAt = Date.now(); lastLog = startedAt; } }
     function minutes() { return startedAt ? Math.round((Date.now() - startedAt) / 60000) : 0; }
     function lessonDone() { const now = Date.now(); Progress.logSession(Math.max(1, Math.round((now - lastLog) / 60000))); lastLog = now; }
     function shouldClose() { const lim = Settings.get().sessionMinutes; return !closed && lim > 0 && startedAt && (Date.now() - startedAt) >= lim * 60000; }

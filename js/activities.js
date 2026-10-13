@@ -21,7 +21,7 @@ function isVowel(l) { return DATA.VOWELS.includes(l); }
 
 function promptHTML(text, speakId = 'sp') {
   return `<div class="prompt">
-    <button class="speak-btn" id="${speakId}" aria-label="Escuchar otra vez">🔊</button>
+    <button class="speak-btn" id="${speakId}" aria-label="Escuchar otra vez">${ICONS.raw('speaker')}</button>
     <p class="prompt-text">${text}</p>
   </div>`;
 }
@@ -42,7 +42,7 @@ A.intro = (letter, opts = {}) => async (root, api) => {
       <button class="example" id="ex"><span class="emoji">${info.emoji}</span><span class="word font-letters">${U.esc(fmtText(info.word))}</span></button>
       ${syls.length ? `<div class="tiles" id="syls">${syls.map(s => `<button class="tile font-letters" data-s="${s}">${U.esc(fmtText(s))}</button>`).join('')}</div>` : ''}
     </div>
-    <div class="actions"><button class="btn primary big" id="next" data-say="Siguiente"><span class="ico">➡️</span>Siguiente</button></div>`;
+    <div class="actions"><button class="btn go big" id="next" data-say="Siguiente">Siguiente${ico('next')}</button></div>`;
   // Primero el sonido en contexto (sílabas y palabra), después el nombre, que es el dato secundario.
   const speech = info.silent
     ? `Esta es la hache. Es muda: no suena. ${info.word} empieza por hache, pero oímos: ${info.word}. ${syls.join(', ')}.`
@@ -210,7 +210,7 @@ A.readWord = (word, lessonWords) => async (root, api) => {
     ${promptHTML('Lee la palabra y toca su dibujo')}
     <div class="read-word font-letters" id="rw">${U.esc(fmtText(word.w))}</div>
     <div class="cards" id="cards">${options.map(o => `<button class="card emoji-card" data-v="${U.esc(o.w)}" aria-label="${U.esc(o.w)}">${o.e}</button>`).join('')}</div>
-    <div class="actions"><button class="btn ghost" id="help" data-say="Ayuda para leer"><span class="ico">🙋</span>Ayúdame</button></div>`;
+    <div class="actions"><button class="btn hint" id="help" data-say="Ayuda para leer">${ico('question')}Ayúdame</button></div>`;
   root.querySelector('#sp').onclick = () => api.say('Lee la palabra y toca su dibujo.');
   api.say('Lee la palabra. ¿Qué dice? Toca su dibujo.');
   const cards = [...root.querySelectorAll('.card')];
@@ -243,10 +243,10 @@ A.trace = (text, { guide = true, spoken = null } = {}) => async (root, api) => {
     ${promptHTML(guide ? `Sigue los puntos: <b class="font-letters">${U.esc(fmtText(text))}</b>` : `Escribe tú: <b>${U.esc(speakText)}</b>`)}
     <div class="trace-wrap"><canvas id="tc" aria-label="Zona para escribir"></canvas></div>
     <div class="actions trace-actions">
-      ${text.length === 1 && STROKES.get(fmtText(text)) ? '<button class="btn ghost" id="demo" data-say="Ver cómo se hace"><span class="ico">👀</span>Ver</button>' : ''}
-      <button class="btn ghost" id="clear" data-say="Borrar todo"><span class="ico">🧽</span>Borrar</button>
-      ${guide ? '' : '<button class="btn ghost" id="hint" data-say="Pista: ver la letra"><span class="ico">💡</span>Pista</button>'}
-      <button class="btn good big" id="done" disabled data-say="Listo: comprobar"><span class="ico">✅</span>Listo</button>
+      ${text.length === 1 && STROKES.get(fmtText(text)) ? `<button class="btn hint" id="demo" data-say="Ver cómo se hace">${ico('eye')}Ver</button>` : ''}
+      <button class="btn soft" id="clear" data-say="Borrar todo">${ico('eraser')}Borrar</button>
+      ${guide ? '' : `<button class="btn hint" id="hint" data-say="Pista: ver la letra">${ico('bulb')}Pista</button>`}
+      <button class="btn go big" id="done" disabled data-say="Listo: comprobar">${ico('check')}Listo</button>
     </div>`;
   root.querySelector('#sp').onclick = () => api.say(spokenMsg);
   api.say(spokenMsg);
@@ -257,7 +257,8 @@ A.trace = (text, { guide = true, spoken = null } = {}) => async (root, api) => {
   if (demoBtn) {
     demoBtn.onclick = async () => { api.sfx('tap'); api.say('Mira cómo se hace. Empieza en el punto verde.'); await tracer.playDemo(); };
     // Con guía, la animación se muestra sola la primera vez (modelo en movimiento: Wright y Wright 1980).
-    if (guide) { await U.wait(900); if (api.alive()) { api.say(`Mira cómo se hace la ${speakText}. Empieza en el punto verde.`); await tracer.playDemo(); } }
+    // Sin bloquear: si la niña toca "Listo" durante la animación, se atiende igual.
+    if (guide) U.wait(900).then(() => { if (api.alive() && root.isConnected) { api.say(`Mira cómo se hace la ${speakText}. Empieza en el punto verde.`); tracer.playDemo(); } });
   }
   let startHinted = false;
   const hintBtn = root.querySelector('#hint');
@@ -296,7 +297,7 @@ A.trace = (text, { guide = true, spoken = null } = {}) => async (root, api) => {
       tracer.showHint(3500);
       if (attempts >= 2 && !skip) {
         skip = document.createElement('button');
-        skip.className = 'btn ghost'; skip.dataset.say = 'Siguiente'; skip.innerHTML = '<span class="ico">➡️</span>Siguiente';
+        skip.className = 'btn go'; skip.dataset.say = 'Siguiente'; skip.innerHTML = 'Siguiente' + ico('next');
         root.querySelector('.trace-actions').appendChild(skip);
       }
     }
@@ -421,7 +422,7 @@ function speakActivity({ kind, target, display, promptText, promptSpoken, modelS
       ${promptHTML(promptText)}
       <div class="say">
         ${display}
-        <button class="mic-btn" id="mic" aria-label="Hablar" data-say="Micrófono para hablar"><span class="mic-icon">🎤</span><span class="mic-label">Dilo tú</span></button>
+        <button class="mic-btn" id="mic" aria-label="Hablar" data-say="Micrófono para hablar"><span class="mic-icon">${ICONS.raw('mic')}</span><span class="mic-label">Dilo tú</span></button>
         <p class="heard" id="heard" aria-live="polite"></p>
       </div>
       <div class="actions" id="say-actions"></div>`;
@@ -437,13 +438,13 @@ function speakActivity({ kind, target, display, promptText, promptSpoken, modelS
     const addSelf = () => {
       if (selfBtn) return;
       selfBtn = document.createElement('button');
-      selfBtn.className = 'btn ghost'; selfBtn.dataset.say = 'Ya lo dije'; selfBtn.innerHTML = '<span class="ico">👍</span>Ya lo dije';
+      selfBtn.className = 'btn hint'; selfBtn.dataset.say = 'Ya lo dije'; selfBtn.innerHTML = ico('thumb') + 'Ya lo dije';
       actions.appendChild(selfBtn);
     };
     const addSkip = () => {
       if (skipBtn) return;
       skipBtn = document.createElement('button');
-      skipBtn.className = 'btn ghost'; skipBtn.dataset.say = 'Siguiente'; skipBtn.innerHTML = '<span class="ico">➡️</span>Siguiente';
+      skipBtn.className = 'btn go'; skipBtn.dataset.say = 'Siguiente'; skipBtn.innerHTML = 'Siguiente' + ico('next');
       actions.appendChild(skipBtn);
     };
     if (!Listen.supported || window.top !== window.self) {
@@ -957,8 +958,8 @@ A.story = (story) => async (root, api) => {
         <div class="scene-big"><span class="emoji">${l.e}</span></div>
         <div class="sentence font-letters" id="sentence">${l.words.map((w, i) => `<button class="sword" data-i="${i}">${U.esc(fmtText(w))}</button>`).join(' ')}<span class="dot">.</span></div>
         <div class="actions">
-          <button class="btn ghost" id="read" data-say="Oír la frase"><span class="ico">🔈</span>Oír</button>
-          <button class="btn primary big" id="next" data-say="${line < story.lines.length - 1 ? 'Pasar página' : 'La pregunta'}"><span class="ico">${line < story.lines.length - 1 ? '📖' : '❓'}</span>${line < story.lines.length - 1 ? 'Pasar página' : 'Pregunta'}</button>
+          <button class="btn nav" id="read" data-say="Oír la frase">${ico('speaker')}Oír</button>
+          <button class="btn go big" id="next" data-say="${line < story.lines.length - 1 ? 'Pasar página' : 'La pregunta'}">${line < story.lines.length - 1 ? 'Pasar página' : 'Pregunta'}${ico(line < story.lines.length - 1 ? 'next' : 'question')}</button>
         </div>
       </div>`;
     const words = [...root.querySelectorAll('.sword')];
