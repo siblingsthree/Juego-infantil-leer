@@ -3,7 +3,7 @@
    Orden de consonantes según el método silábico habitual en español:
    primero las de trazo y sonido más sencillos (m, p, s, l, t, n, d). */
 const DATA = (() => {
-  const VERSION = '2026-10-13.13';
+  const VERSION = '2026-10-13.14';
   const VOWELS = ['a', 'e', 'i', 'o', 'u'];
   const CONSONANTS = ['m', 'p', 's', 'l', 't', 'n', 'd', 'f', 'r', 'b', 'c', 'g', 'v', 'z', 'ñ', 'j', 'y', 'h', 'qu', 'ch', 'll'];
   // Consonantes continuas (se pueden alargar: mmm, sss): más fáciles para oír el sonido inicial.

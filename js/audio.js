@@ -20,27 +20,48 @@ const Voice = (() => {
   }
 
   /* Devuelve una promesa que se resuelve al terminar (o tras un tope de tiempo:
-     algunos navegadores no disparan onend después de cancel()). */
+     algunos navegadores no disparan onend después de cancel()).
+     Manías de Safari (iPhone/iPad) que se evitan aquí:
+     - cancel() seguido de speak() en el mismo instante deja la nueva frase "pendiente" sin sonar:
+       solo se cancela si de verdad está hablando, y se espera un momento antes de hablar.
+     - el sintetizador puede quedarse en pausa: se llama a resume() antes de hablar.
+     - a veces una frase nunca arranca: si no empieza en 1,2 s, se reintenta una vez. */
+  let seq = 0;
   function say(text, opts = {}) {
     return new Promise(resolve => {
       if (!supported || !text) return resolve();
-      try {
-        speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
+      const my = ++seq;
+      let done = false, started = false, retried = false, u = null;
+      const finish = () => { if (!done) { done = true; resolve(); } };
+      const build = () => {
+        u = new SpeechSynthesisUtterance(text);
         if (!chosen) refresh();
         if (chosen) u.voice = chosen;
         u.lang = chosen ? chosen.lang : 'es-ES';
         u.rate = opts.rate != null ? opts.rate : Settings.get().rate;
         u.pitch = opts.pitch != null ? opts.pitch : 1.05;
-        let done = false;
-        const finish = () => { if (!done) { done = true; resolve(); } };
-        u.onend = finish; u.onerror = finish;
-        speechSynthesis.speak(u);
-        setTimeout(finish, Math.min(12000, 1500 + text.length * 120));
-      } catch (e) { resolve(); }
+        u.onstart = () => { started = true; };
+        u.onend = finish;
+        u.onerror = e => { if (e && e.error === 'interrupted' || e && e.error === 'canceled') finish(); else finish(); };
+        return u;
+      };
+      const speakNow = () => {
+        if (done || my !== seq) return finish();
+        try { speechSynthesis.resume(); speechSynthesis.speak(build()); } catch (e) { return finish(); }
+        setTimeout(() => {
+          if (done || started || my !== seq) return;
+          if (!retried) { retried = true; try { speechSynthesis.cancel(); } catch (e) { /* nada */ } setTimeout(speakNow, 120); }
+          else finish();
+        }, 1200);
+      };
+      try {
+        const busy = speechSynthesis.speaking || speechSynthesis.pending;
+        if (busy) { speechSynthesis.cancel(); setTimeout(speakNow, 80); } else speakNow();
+        setTimeout(finish, Math.min(14000, 2500 + text.length * 120));
+      } catch (e) { finish(); }
     });
   }
-  function stop() { if (supported) try { speechSynthesis.cancel(); } catch (e) { /* nada */ } }
+  function stop() { seq++; if (supported) try { speechSynthesis.cancel(); } catch (e) { /* nada */ } }
   /* Sonido de una letra: si hay un audio grabado en audio/sonidos/<letra>.mp3 se usa (la voz
      sintetizada no sabe pronunciar /m/ aislada); si no, se dice el nombre de la letra. */
   const soundCache = {};
