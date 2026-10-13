@@ -138,12 +138,18 @@ A.buildSyllable = (consonants, rounds, only = null) => async (root, api) => {
           await api.praise(`${target}. Has juntado la ${letterName(sel[0])} y la ${sel[1]}.`);
           resolve(first);
         } else {
+          // Solo se marca lo que está mal: si la vocal es correcta, se queda puesta.
           first = false; api.sfx('no'); api.miss(target);
-          slots.forEach(s => s.classList.add('wrong'));
-          api.say(`Eso dice ${made}. Escucha otra vez: ${target}.`);
+          const okC = sel[0] === c, okV = sel[1] === v;
+          slots[0].classList.add(okC ? 'keep' : 'wrong');
+          slots[1].classList.add(okV ? 'keep' : 'wrong');
+          api.say(okV ? `La ${v} está bien. Escucha: ${target}. ¿Qué letra va delante?`
+            : okC ? `La ${letterName(c)} está bien. Escucha: ${target}. ¿Qué vocal va detrás?`
+            : `Eso dice ${made}. Escucha otra vez: ${target}.`);
           await U.wait(900);
-          sel = [null, null];
-          slots.forEach(s => { s.textContent = ''; s.classList.remove('wrong'); });
+          if (!okC) { sel[0] = null; slots[0].textContent = ''; }
+          if (!okV) { sel[1] = null; slots[1].textContent = ''; }
+          slots.forEach(s => s.classList.remove('wrong'));
         }
       };
       root.querySelectorAll('.tile').forEach(t => t.onclick = () => {
