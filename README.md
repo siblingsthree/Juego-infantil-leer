@@ -87,35 +87,13 @@ La voz sintetizada no sabe pronunciar un fonema aislado (/m/ sin vocal), así qu
 
 ## Corrección del trazo
 
-La letra guía se pinta en un lienzo oculto. Al pulsar "Listo" se miden dos cosas:
+La letra guía se pinta en un lienzo oculto. Al pulsar "Listo" se miden tres cosas:
 
-- **Cobertura**: qué parte de la letra quedó pintada.
-- **Precisión**: qué parte de la pintura cae dentro de la letra ampliada con un margen de tolerancia.
+- **Cobertura**: qué parte de la letra queda tapada por el trazo de la niña, engordado un poco (un trazo desplazado o algo más pequeño sigue contando; son niños, tiene que entenderse, no encajar).
+- **Precisión**: qué parte del trazo cae dentro de la letra ampliada con un margen generoso (un cuarto de su altura).
+- **Tamaño**: lo dibujado ocupa más o menos lo que la letra (una O pequeña no vale por una d).
 
-Con guía se exige 72 % de cobertura y 55 % de precisión; sin guía, 62 % y 50 %. Los umbrales están en `js/tracing.js` (`evaluate`). Se puede ajustar si resulta demasiado fácil o difícil.
-
-## Voz: síntesis y reconocimiento
-
-**Síntesis (el juego habla)**: Web Speech API, `speechSynthesis`. Usa las voces en español que tenga el dispositivo; en los ajustes se elige voz y velocidad.
-
-**Reconocimiento (el juego escucha)**: Web Speech API, `SpeechRecognition`. Lo usan las actividades "Dilo tú" y "Lee en voz alta".
-
-| Navegador | Habla | Escucha |
-|---|---|---|
-| Chrome / Edge (Android, Windows, Mac) | sí | sí, con conexión a internet (el audio se procesa en servidores de Google o Microsoft) |
-| Safari (iPad, iPhone, Mac) | sí | sí, con Siri y Dictado activados |
-| Firefox | sí | no |
-
-Cómo se decide que lo dijo bien (`js/audio.js`, `Listen.matches`):
-
-- Se comparan hasta cinco alternativas que devuelve el reconocedor, sin tildes ni mayúsculas.
-- Se igualan pronunciaciones del español: b/v, ll/y, z/s, c/k, ce/se, ge/je, h muda, qu/k.
-- Sílabas: vale si lo oído empieza por la sílaba. Un reconocedor adulto suele convertir "pa" en "papá" o "para", y eso cuenta como acierto.
-- Palabras: exacta, o con un solo error que no sea la primera letra. "Gato" por "pato" es fallo.
-
-El reconocimiento nunca bloquea: si falla una vez aparece "Ya lo dije" para que un adulto confirme, y a la segunda aparece "Siguiente". Sin micrófono, sin permiso o sin conexión aparece el mismo botón. Un reconocedor de habla adulta entiende mal a un niño de 5 años con una sílaba suelta; la tolerancia está pensada para eso, y "Ya lo dije" no suma estrella.
-
-El micrófono solo funciona en páginas servidas por HTTPS o en `localhost`. En la versión publicada como artefacto de Claude no está disponible; sí en GitHub Pages.
+La exigencia se elige en ajustes: relajada (por defecto, 4 y 5 años), normal o exigente (6 y 7 años). Los umbrales están en `js/tracing.js` (`evaluate`). Las letras en espejo (b por d, p por q) se detectan comparando el trazo reflejado y no cuentan como fallo.
 
 ## Ajustes para madres y padres
 

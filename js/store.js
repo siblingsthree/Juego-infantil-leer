@@ -3,7 +3,7 @@
    en navegación privada o con datos bloqueados el juego sigue funcionando sin guardar. */
 const Settings = (() => {
   const KEY = 'bosque-letras:settings';
-  const DEFAULTS = { caseMode: 'upper', rate: 0.9, voiceURI: null, freeMode: false, soundFx: true, twoTap: true, sessionMinutes: 10, childName: '' };
+  const DEFAULTS = { caseMode: 'upper', rate: 0.9, voiceURI: null, freeMode: false, soundFx: true, twoTap: true, sessionMinutes: 10, childName: '', traceStrict: 0 };
   let cache = null;
   function get() {
     if (cache) return cache;

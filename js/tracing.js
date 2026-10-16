@@ -83,7 +83,8 @@ class Tracer {
     m.fillText(this.text, this.x, this.baseY);
     const t = this.tol.getContext('2d');
     setup(t);
-    t.lineWidth = Math.max(18, fs * 0.26);
+    // Banda de tolerancia: un trazo a menos de ~un cuarto de la altura de la letra sigue "en la letra".
+    t.lineWidth = Math.max(26, fs * 0.5);
     t.strokeText(this.text, this.x, this.baseY);
     t.fillText(this.text, this.x, this.baseY);
 
@@ -209,12 +210,13 @@ class Tracer {
     this.render();
   }
 
-  drawSegment(pts) {
-    const c = this.ink.getContext('2d');
+  drawSegment(pts, target = null, width = null) {
+    const c = (target || this.ink).getContext('2d');
+    const w = width || this.lineW;
     c.lineCap = 'round'; c.lineJoin = 'round';
-    c.strokeStyle = '#000'; c.lineWidth = this.lineW;
+    c.strokeStyle = '#000'; c.lineWidth = w;
     c.beginPath();
-    if (pts.length === 1) { c.arc(pts[0].x, pts[0].y, this.lineW / 2, 0, Math.PI * 2); c.fillStyle = '#000'; c.fill(); return; }
+    if (pts.length === 1) { c.arc(pts[0].x, pts[0].y, w / 2, 0, Math.PI * 2); c.fillStyle = '#000'; c.fill(); return; }
     c.moveTo(pts[0].x, pts[0].y);
     for (let i = 1; i < pts.length; i++) c.lineTo(pts[i].x, pts[i].y);
     c.stroke();
@@ -292,9 +294,16 @@ class Tracer {
       // Reflejar respecto al centro de la letra, no del lienzo: la letra está centrada en this.x.
     }
     const d = src.getContext('2d').getImageData(0, 0, this.w, this.h).data;
-    let covered = 0;
-    for (const i of this.letterPixels) if (d[i * 4 + 3] > 40) covered++;
+    // Cobertura: se mide con la tinta engordada (radio ≈ un quinto de la letra), para que un trazo
+    // desplazado o un poco más pequeño siga contando. Son niños: que se entienda, no que encaje.
+    const wide = document.createElement('canvas'); wide.width = this.w; wide.height = this.h;
+    if (mirror) { const wc = wide.getContext('2d'); wc.translate(this.w, 0); wc.scale(-1, 1); }
+    for (const st of this.strokes) this.drawSegment(st, wide, this.lineW + this.fs * 0.16);
+    const wd = wide.getContext('2d').getImageData(0, 0, this.w, this.h).data;
+    let covered = 0, rawCovered = 0;
+    for (const i of this.letterPixels) { if (wd[i * 4 + 3] > 40) covered++; if (d[i * 4 + 3] > 40) rawCovered++; }
     const coverage = this.letterPixels.length ? covered / this.letterPixels.length : 0;
+    const rawCoverage = this.letterPixels.length ? rawCovered / this.letterPixels.length : 0;
     let inkCount = 0, inside = 0;
     for (let y = 0; y < this.h; y += 2) {
       for (let x = 0; x < this.w; x += 2) {
@@ -303,14 +312,20 @@ class Tracer {
       }
     }
     const precision = inkCount ? inside / inkCount : 0;
-    const covThr = this.guide ? 0.72 : 0.62;
-    const precThr = this.guide ? 0.55 : 0.5;
-    const res = { coverage, precision, ok: inkCount > 40 && coverage >= covThr && precision >= precThr, mirrored: false };
-    // Letras asimétricas: si la tinta reflejada encaja claramente mejor que la real, está en espejo.
+    // Exigencia (ajustes): 0 relajada (por defecto), 1 normal, 2 exigente.
+    const strict = (typeof Settings !== 'undefined' && Settings.get().traceStrict) || 0;
+    const covThr = [this.guide ? 0.65 : 0.6, this.guide ? 0.72 : 0.66, this.guide ? 0.8 : 0.75][strict];
+    const precThr = [this.guide ? 0.45 : 0.4, this.guide ? 0.55 : 0.5, this.guide ? 0.65 : 0.6][strict];
+    // Tamaño general: lo dibujado debe ocupar más o menos lo que la letra (una O no vale por una d).
+    let ix0 = this.w, iy0 = this.h, ix1 = 0, iy1 = 0;
+    for (let y = 0; y < this.h; y += 2) for (let x = 0; x < this.w; x += 2) if (d[(y * this.w + x) * 4 + 3] > 40) { if (x < ix0) ix0 = x; if (x > ix1) ix1 = x; if (y < iy0) iy0 = y; if (y > iy1) iy1 = y; }
+    const hr = (iy1 - iy0) / this.bbox.h, wr = (ix1 - ix0) / this.bbox.w;
+    const sizeOk = inkCount > 40 && hr > 0.55 && hr < 1.7 && wr > 0.5 && wr < 1.8;
+    const res = { coverage, rawCoverage, precision, sizeOk, ok: inkCount > 40 && coverage >= covThr && precision >= precThr && sizeOk, mirrored: false };
+    // Letras asimétricas: si la tinta reflejada (sin engordar) cubre la letra claramente mejor que la real, está en espejo.
     if (!mirror && inkCount > 40 && this.text.length === 1 && 'bdpqBDPQJLFEKNSZszjrcCGfeaghyRPNZ'.includes(this.text)) {
       const m = this.evaluate(true);
-      const score = r => r.coverage * 0.6 + r.precision * 0.4;
-      if (m.coverage >= covThr && m.precision >= precThr && score(m) > score(res) + 0.12) { res.mirrored = true; res.ok = false; }
+      if (m.rawCoverage >= 0.6 && m.rawCoverage > rawCoverage + 0.12) { res.mirrored = true; res.ok = false; }
     }
     return res;
   }

@@ -297,7 +297,8 @@ A.trace = (text, { guide = true, spoken = null } = {}) => async (root, api) => {
       }
       attempts++;
       api.sfx('no');
-      if (res.coverage < 0.3) api.say('Falta pintar más. Sigue toda la letra con el dedo.');
+      if (!res.sizeOk) api.say('Hazla más grande, del tamaño de la letra gris.');
+      else if (res.coverage < 0.3) api.say('Falta pintar más. Sigue toda la letra con el dedo.');
       else if (res.precision < 0.5) api.say('Te saliste un poco. Intenta ir por encima de los puntos.');
       else api.say(U.pick(DATA.RETRY));
       tracer.showHint(3500);

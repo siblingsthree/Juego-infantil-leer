@@ -264,6 +264,14 @@ const App = (() => {
         <small id="micResult"></small>
       </div>
       <div class="field">
+        <label for="traceStrict">Exigencia al trazar letras</label>
+        <select id="traceStrict">
+          <option value="0" ${!s.traceStrict ? 'selected' : ''}>Relajada: que se entienda la letra (4 y 5 años)</option>
+          <option value="1" ${s.traceStrict === 1 ? 'selected' : ''}>Normal</option>
+          <option value="2" ${s.traceStrict === 2 ? 'selected' : ''}>Exigente: bien encajada en la guía (6 y 7 años)</option>
+        </select>
+      </div>
+      <div class="field">
         <label for="rate">Velocidad de la voz: <output id="rateOut">${s.rate}</output></label>
         <input type="range" id="rate" min="0.6" max="1.2" step="0.05" value="${s.rate}">
       </div>
@@ -325,6 +333,7 @@ const App = (() => {
     const q = sel => modal.querySelector(sel);
     q('#caseMode').onchange = e => Settings.set({ caseMode: e.target.value });
     q('#childName').oninput = e => Settings.set({ childName: e.target.value.trim() });
+    q('#traceStrict').onchange = e => Settings.set({ traceStrict: +e.target.value });
     q('#voice').onchange = e => { Settings.set({ voiceURI: e.target.value }); Voice.refresh(); };
     q('#rate').oninput = e => { q('#rateOut').value = e.target.value; Settings.set({ rate: +e.target.value }); };
     q('#freeMode').onchange = e => Settings.set({ freeMode: e.target.checked });
