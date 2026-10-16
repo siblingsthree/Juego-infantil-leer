@@ -105,12 +105,15 @@ const Sfx = (() => {
     win: [[523, 0, 0.14], [659, 0.12, 0.14], [784, 0.24, 0.14], [1046, 0.36, 0.35]],
     pop: [[880, 0, 0.06, 'triangle', 0.12]],
   };
+  /* En iOS, un AudioContext activo impide que el reconocimiento de voz capture el micrófono. */
+  async function suspend() { try { if (ctx && ctx.state === 'running') await ctx.suspend(); } catch (e) { /* nada */ } }
+  async function resume() { try { if (ctx && ctx.state === 'suspended' && Settings.get().soundFx) await ctx.resume(); } catch (e) { /* nada */ } }
   function play(name) {
     const c = ac(); if (!c) return;
     const t = c.currentTime;
     (PATTERNS[name] || PATTERNS.tap).forEach(([f, dt, dur, type, gain]) => note(c, f, t + dt, dur, type, gain));
   }
-  return { play };
+  return { play, suspend, resume };
 })();
 
 /* Reconocimiento de voz (Web Speech API). Funciona en Chrome, Edge y Safari (iOS 14.5+);
@@ -136,9 +139,13 @@ const Listen = (() => {
       const finish = (status) => {
         if (settled) return; settled = true;
         clearTimeout(timer); active = null;
+        Sfx.resume();
         const alts = finals.length ? finals : (interim ? [interim] : []);
         resolve({ status: alts.length ? 'result' : status, alternatives: alts });
       };
+      rec.onaudiostart = () => { last.audio = true; };
+      rec.onsoundstart = () => { last.sound = true; };
+      rec.onspeechstart = () => { last.speech = true; };
       const timer = setTimeout(() => { try { rec.stop(); } catch (e) { /* nada */ } setTimeout(() => finish('nospeech'), 1500); }, timeout);
       rec.onresult = e => {
         for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -154,11 +161,14 @@ const Listen = (() => {
       };
       rec.onstart = () => { last.started = true; };
       rec.onend = () => finish('nospeech');
-      try { rec.start(); } catch (e) { last.error = String(e && e.message || e); finish('error'); }
+      // Se pausa el motor de sonidos (iOS no captura el micrófono con Web Audio activo) y se arranca.
+      Sfx.suspend().then(() => {
+        try { rec.start(); } catch (e) { last.error = String(e && e.message || e); finish('error'); }
+      });
     });
   }
   /* Último intento, para la prueba de micrófono de los ajustes. */
-  const last = { status: null, error: null, started: false, alternatives: [] };
+  const last = { status: null, error: null, started: false, audio: false, sound: false, speech: false, alternatives: [] };
   function platformHint(status) {
     const ua = navigator.userAgent;
     const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -171,13 +181,17 @@ const Listen = (() => {
       : 'El navegador no tiene permiso de micrófono. Toca el candado o el icono junto a la dirección → Permisos → Micrófono → Permitir.';
     if (status === 'nomic') return 'No se encuentra ningún micrófono. Comprueba que otra app no lo esté usando.';
     if (status === 'network') return 'El reconocimiento necesita conexión a internet (Chrome y Edge envían el audio a sus servidores).';
-    if (status === 'nospeech') return (ios && standalone)
-      ? 'No se oyó nada. En iPhone, abierto desde el icono de pantalla de inicio, el reconocimiento a veces no arranca: prueba en Safari normal.'
-      : 'No se oyó nada en 7 segundos. Habla fuerte y cerca; el permiso debería haberse pedido la primera vez.';
+    if (status === 'nospeech') {
+      if (ios && standalone) return 'No se oyó nada. En iPhone, abierto desde el icono de pantalla de inicio, el reconocimiento a veces no arranca: prueba en Safari normal.';
+      if (!last.audio) return 'El reconocimiento arrancó pero no llegó audio del micrófono. En iPhone: Ajustes → Safari → Micrófono → Permitir, y comprueba que ninguna otra app lo está usando.';
+      if (!last.sound) return 'El micrófono capta pero no detectó sonido: habla más fuerte y más cerca.';
+      if (!last.speech) return 'Detectó sonido pero no lo reconoció como habla: habla claro, una palabra, a unos 20 cm.';
+      return 'Detectó habla pero no devolvió texto. En iPhone hace falta Ajustes → General → Teclado → Activar dictado y conexión a internet.';
+    }
     return '';
   }
   const _listen = listen;
-  listen = async function (opts) { last.status = null; last.error = null; last.started = false; const r = await _listen(opts); last.status = r.status; last.alternatives = r.alternatives; return r; };
+  listen = async function (opts) { last.status = null; last.error = null; last.started = false; last.audio = false; last.sound = false; last.speech = false; const r = await _listen(opts); last.status = r.status; last.alternatives = r.alternatives; return r; };
 
   /* Normaliza para comparar lo oído con lo esperado: sin tildes, sin signos, y con las
      equivalencias de pronunciación del español (b/v, ll/y, z/s, c/k, ce/se, ge/je, h muda). */

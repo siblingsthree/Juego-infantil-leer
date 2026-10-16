@@ -350,7 +350,8 @@ const App = (() => {
       out.textContent = 'Escuchando 7 segundos… di "pato".';
       const r = await Listen.listen({ onInterim: t => { out.textContent = 'Oigo: ' + t; } });
       const ua = navigator.userAgent.match(/\(([^)]+)\)/);
-      const info = `Estado: ${r.status}${Listen.last.error ? ' (' + Listen.last.error + ')' : ''} · arrancó: ${Listen.last.started ? 'sí' : 'no'} · oído: ${r.alternatives.length ? '«' + r.alternatives.join(' / ') + '»' : 'nada'} · ${ua ? ua[1] : ''}${window.top !== window.self ? ' · dentro de otra página' : ''}`;
+      const L = Listen.last;
+      const info = `Estado: ${r.status}${L.error ? ' (' + L.error + ')' : ''} · arrancó: ${L.started ? 'sí' : 'no'} · audio: ${L.audio ? 'sí' : 'no'} · sonido: ${L.sound ? 'sí' : 'no'} · habla: ${L.speech ? 'sí' : 'no'} · oído: ${r.alternatives.length ? '«' + r.alternatives.join(' / ') + '»' : 'nada'} · ${ua ? ua[1] : ''}${window.top !== window.self ? ' · dentro de otra página' : ''} · v${DATA.VERSION}`;
       out.textContent = info + (r.status === 'result' ? (Listen.matches(r.alternatives, 'pato', { kind: 'word' }) ? ' · ✅ reconoce "pato"' : ' · ❌ no coincide con "pato"') : ' · ' + Listen.platformHint(r.status));
     };
     q('#close').onclick = () => { closeModal(); refresh(); };

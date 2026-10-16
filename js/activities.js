@@ -464,7 +464,6 @@ function speakActivity({ kind, target, display, promptText, promptSpoken, modelS
         if (done || busy) return;
         busy = true; mic.classList.add('listening'); mic.querySelector('.mic-label').textContent = 'Te escucho…';
         heard.textContent = '';
-        api.sfx('pop');
         const res = await Listen.listen({ onInterim: t => { heard.textContent = `Oigo: «${t}»`; } });
         mic.classList.remove('listening'); mic.querySelector('.mic-label').textContent = 'Dilo tú'; busy = false;
         if (done) return;
