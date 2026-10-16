@@ -104,6 +104,7 @@ class Tracer {
     const authored = this.text.length === 1 && typeof STROKES !== 'undefined' ? STROKES.get(this.text) : null;
     this.demoStrokes = authored ? authored.map(st => st.map(p => ({ x: this.bbox.x + p.x * this.bbox.w, y: this.bbox.y + p.y * this.bbox.h }))) : null;
     this.start = this.demoStrokes ? this.demoStrokes[0][0] : this.startPoint(md);
+    this.startNorm = authored ? authored[0][0] : null;
     this.demoProgress = null;
   }
 
@@ -273,10 +274,21 @@ class Tracer {
   }
 
   clear() { this.strokes = []; this.current = null; this.redrawInk(); this.render(); }
+  /* Recuadro que ocupa lo dibujado. */
+  inkBBox() {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const st of this.strokes) for (const p of st) { if (p.x < x0) x0 = p.x; if (p.x > x1) x1 = p.x; if (p.y < y0) y0 = p.y; if (p.y > y1) y1 = p.y; }
+    if (!isFinite(x0)) return null;
+    const r = this.lineW / 2;
+    return { x: x0 - r, y: y0 - r, w: Math.max(1, x1 - x0 + 2 * r), h: Math.max(1, y1 - y0 + 2 * r) };
+  }
+  /* ¿Empezó por donde empieza la letra? Se compara en coordenadas relativas al propio dibujo,
+     así da igual dónde lo haya hecho. */
   startedAtStart() {
-    if (!this.start || !this.strokes.length) return true;
-    const p = this.strokes[0][0];
-    return Math.hypot(p.x - this.start.x, p.y - this.start.y) < this.fs * 0.3;
+    if (!this.startNorm || !this.strokes.length) return true;
+    const ib = this.inkBBox(); const p = this.strokes[0][0];
+    const n = { x: (p.x - ib.x) / ib.w, y: (p.y - ib.y) / ib.h };
+    return Math.hypot(n.x - this.startNorm.x, n.y - this.startNorm.y) < 0.35;
   }
   showHint(ms = 2500) {
     this.hintUntil = Date.now() + ms; this.render();
@@ -284,22 +296,29 @@ class Tracer {
   }
   hasInk() { return this.strokes.some(s => s.length > 2); }
 
-  /* Puntúa la tinta (por defecto la real; con mirror=true, la tinta reflejada horizontalmente,
-     para detectar letras en espejo: normales hasta los 7 años, no se penalizan). */
+  /* Puntúa la forma, no el sitio: lo dibujado se alinea con la letra guía (se mueve y se escala al
+     recuadro de la letra) antes de comparar. Con mirror=true se compara el dibujo reflejado, para
+     detectar letras en espejo (normales hasta los 7 años, no se penalizan). */
   evaluate(mirror = false) {
-    let src = this.ink;
-    if (mirror) {
-      src = document.createElement('canvas'); src.width = this.w; src.height = this.h;
-      const mc = src.getContext('2d'); mc.translate(this.w, 0); mc.scale(-1, 1); mc.drawImage(this.ink, 0, 0);
-      // Reflejar respecto al centro de la letra, no del lienzo: la letra está centrada en this.x.
-    }
-    const d = src.getContext('2d').getImageData(0, 0, this.w, this.h).data;
-    // Cobertura: se mide con la tinta engordada (radio ≈ un quinto de la letra), para que un trazo
-    // desplazado o un poco más pequeño siga contando. Son niños: que se entienda, no que encaje.
-    const wide = document.createElement('canvas'); wide.width = this.w; wide.height = this.h;
-    if (mirror) { const wc = wide.getContext('2d'); wc.translate(this.w, 0); wc.scale(-1, 1); }
-    for (const st of this.strokes) this.drawSegment(st, wide, this.lineW + this.fs * 0.16);
-    const wd = wide.getContext('2d').getImageData(0, 0, this.w, this.h).data;
+    const fail = { coverage: 0, rawCoverage: 0, precision: 0, sizeOk: false, ok: false, mirrored: false };
+    const ib = this.inkBBox();
+    if (!ib || !this.strokes.some(st => st.length > 2)) return fail;
+    const hr = ib.h / this.bbox.h, wr = ib.w / this.bbox.w;
+    const aspect = (ib.w / ib.h) / (this.bbox.w / this.bbox.h);
+    // Tamaño: al menos un tercio de la letra guía y proporciones parecidas (una O no vale por una d).
+    const sizeOk = hr >= 0.33 && wr >= 0.28 && aspect > 0.5 && aspect < 2;
+    const sx = this.bbox.w / ib.w, sy = this.bbox.h / ib.h;
+    const tf = p => ({ x: this.bbox.x + (p.x - ib.x) * sx, y: this.bbox.y + (p.y - ib.y) * sy });
+    const make = extra => {
+      const cv = document.createElement('canvas'); cv.width = this.w; cv.height = this.h;
+      const c = cv.getContext('2d');
+      if (mirror) { c.translate(this.w, 0); c.scale(-1, 1); }
+      for (const st of this.strokes) this.drawSegment(st.map(tf), cv, this.lineW + extra);
+      return cv.getContext('2d').getImageData(0, 0, this.w, this.h).data;
+    };
+    const d = make(0);
+    // Cobertura con la tinta engordada un poco (radio ≈ un décimo de la letra): temblores y pequeños desvíos cuentan.
+    const wd = make(this.fs * 0.16);
     let covered = 0, rawCovered = 0;
     for (const i of this.letterPixels) { if (wd[i * 4 + 3] > 40) covered++; if (d[i * 4 + 3] > 40) rawCovered++; }
     const coverage = this.letterPixels.length ? covered / this.letterPixels.length : 0;
@@ -316,11 +335,6 @@ class Tracer {
     const strict = (typeof Settings !== 'undefined' && Settings.get().traceStrict) || 0;
     const covThr = [this.guide ? 0.65 : 0.6, this.guide ? 0.72 : 0.66, this.guide ? 0.8 : 0.75][strict];
     const precThr = [this.guide ? 0.45 : 0.4, this.guide ? 0.55 : 0.5, this.guide ? 0.65 : 0.6][strict];
-    // Tamaño general: lo dibujado debe ocupar más o menos lo que la letra (una O no vale por una d).
-    let ix0 = this.w, iy0 = this.h, ix1 = 0, iy1 = 0;
-    for (let y = 0; y < this.h; y += 2) for (let x = 0; x < this.w; x += 2) if (d[(y * this.w + x) * 4 + 3] > 40) { if (x < ix0) ix0 = x; if (x > ix1) ix1 = x; if (y < iy0) iy0 = y; if (y > iy1) iy1 = y; }
-    const hr = (iy1 - iy0) / this.bbox.h, wr = (ix1 - ix0) / this.bbox.w;
-    const sizeOk = inkCount > 40 && hr > 0.55 && hr < 1.7 && wr > 0.5 && wr < 1.8;
     const res = { coverage, rawCoverage, precision, sizeOk, ok: inkCount > 40 && coverage >= covThr && precision >= precThr && sizeOk, mirrored: false };
     // Letras asimétricas: si la tinta reflejada (sin engordar) cubre la letra claramente mejor que la real, está en espejo.
     if (!mirror && inkCount > 40 && this.text.length === 1 && 'bdpqBDPQJLFEKNSZszjrcCGfeaghyRPNZ'.includes(this.text)) {

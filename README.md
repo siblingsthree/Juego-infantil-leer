@@ -87,7 +87,7 @@ La voz sintetizada no sabe pronunciar un fonema aislado (/m/ sin vocal), así qu
 
 ## Corrección del trazo
 
-La letra guía se pinta en un lienzo oculto. Al pulsar "Listo" se miden tres cosas:
+La forma manda, no el sitio: lo dibujado se alinea con la letra guía (se desplaza y se escala a su recuadro) antes de comparar, así la niña puede hacer la letra en cualquier parte del lienzo y de cualquier tamaño razonable. Al pulsar "Listo" se miden tres cosas:
 
 - **Cobertura**: qué parte de la letra queda tapada por el trazo de la niña, engordado un poco (un trazo desplazado o algo más pequeño sigue contando; son niños, tiene que entenderse, no encajar).
 - **Precisión**: qué parte del trazo cae dentro de la letra ampliada con un margen generoso (un cuarto de su altura).
