@@ -172,7 +172,7 @@ A.buildSyllable = (consonants, rounds, only = null) => async (root, api) => {
 A.buildWord = (word, lessonWords) => async (root, api) => {
   const others = lessonWords.flatMap(w => w.s).filter(s => !word.s.includes(s));
   const tiles = U.shuffle([...word.s, ...U.shuffle([...new Set(others)]).slice(0, 2)]);
-  const spoken = `Escucha: ${word.w}. Arma la palabra ${word.w}.`;
+  const spoken = `Escucha: ${word.w}. Arma la palabra.`;
   root.innerHTML = `
     ${promptHTML('Arma la palabra que oyes')}
     <div class="word-target"><span class="emoji">${word.e}</span></div>
@@ -538,7 +538,7 @@ A.initialSound = (letters, rounds) => async (root, api) => {
     used.add(item.w);
     const distractors = U.shuffle(letters.filter(l => l !== item.l)).slice(0, 2);
     const options = U.shuffle([item.l, ...distractors]);
-    const spoken = `${item.w}. ¿Con qué letra empieza ${item.w}?`;
+    const spoken = `Escucha: ${item.w}. ¿Con qué letra empieza?`;
     root.innerHTML = `
       ${promptHTML('¿Con qué letra empieza?')}
       <div class="round-count">${r + 1} / ${rounds}</div>
@@ -581,7 +581,7 @@ A.clapSyllables = (rounds) => async (root, api) => {
     const pool = bank.filter(x => x.n === wantN && !used.has(x.w));
     const item = U.pick(pool.length ? pool : bank);
     used.add(item.w);
-    const spoken = `${item.w}. ¿Cuántas palmadas tiene ${item.w}? ${item.s.join(', ')}.`;
+    const spoken = `¿Cuántas palmadas tiene... ${item.w}?`;
     root.innerHTML = `
       ${promptHTML('¿Cuántas palmadas tiene?')}
       <div class="round-count">${r + 1} / ${rounds}</div>
@@ -698,7 +698,7 @@ A.missingSyllable = (word, lessonWords) => async (root, api) => {
   const missing = word.s[idx];
   const others = [...new Set(lessonWords.flatMap(w => w.s).filter(s => s !== missing))];
   const options = U.shuffle([missing, ...U.shuffle(others).slice(0, 2)]);
-  const spoken = `${word.w}. Falta una sílaba. ¿Cuál es?`;
+  const spoken = `Escucha: ${word.w}. Falta una sílaba. ¿Cuál es?`;
   root.innerHTML = `
     ${promptHTML('¿Qué sílaba falta?')}
     <button class="word-target" id="pic" aria-label="${U.esc(word.w)}"><span class="emoji">${word.e}</span></button>
@@ -731,7 +731,7 @@ A.missingSyllable = (word, lessonWords) => async (root, api) => {
 A.pickWord = (word, lessonWords) => async (root, api) => {
   const others = U.shuffle(lessonWords.filter(w => w.w !== word.w)).slice(0, 2);
   const options = U.shuffle([word, ...others]);
-  const spoken = `${word.w}. ¿Dónde pone ${word.w}?`;
+  const spoken = `¿Dónde pone... ${word.w}?`;
   root.innerHTML = `
     ${promptHTML('¿Dónde pone la palabra?')}
     <button class="word-target" id="pic" aria-label="${U.esc(word.w)}"><span class="emoji">${word.e}</span></button>
@@ -763,7 +763,7 @@ A.dictation = (word) => async (root, api) => {
   const letters = [...word.w.normalize('NFD').replace(/[̀-ͯ]/g, '')];
   const extra = U.shuffle(['a', 'e', 'i', 'o', 'u', 'm', 'p', 's', 'l', 't', 'n', 'd'].filter(l => !letters.includes(l))).slice(0, 2);
   const tiles = U.shuffle([...letters, ...extra]);
-  const spoken = `Dictado: ${word.w}. ${word.s.join(', ')}. Escribe ${word.w} con las letras.`;
+  const spoken = `Dictado: ${word.w}. ${word.s.join(', ')}. Escríbela con las letras.`;
   root.innerHTML = `
     ${promptHTML('Escribe la palabra que oyes')}
     <button class="word-target" id="pic" aria-label="${U.esc(word.w)}"><span class="emoji">${word.e}</span></button>
