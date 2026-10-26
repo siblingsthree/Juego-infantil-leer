@@ -833,7 +833,7 @@ A.buildUnit = (unit) => async (root, api) => {
   const letters = [...unit];
   const extra = U.shuffle([...DATA.VOWELS, 'm', 'p', 's', 'l', 't', 'n', 'r', 'b'].filter(l => !letters.includes(l))).slice(0, 2);
   const tiles = U.shuffle([...letters, ...extra]);
-  const spoken = `Forma: ${unit}. ${letters.map(letterName).join(', ')}.`;
+  const spoken = `Escucha: ${unit}. Fórmala con las letras.`;
   root.innerHTML = `
     ${promptHTML('Forma la sílaba que oyes, letra a letra')}
     <div class="slots letters font-letters" id="slots">${letters.map(() => '<span class="slot small"></span>').join('')}</div>
